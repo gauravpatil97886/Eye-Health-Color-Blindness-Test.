@@ -138,9 +138,9 @@
             console.log('Score:', score);
 
             if (!isNaN(score)) {
-                if (score < 6) {
+                if (score < 8) {
                     scoreMessage.textContent = "You scored less than 6. You might have color blindness issues. Consider consulting an eye specialist for a checkup.";
-                } else if (score === 8) {
+                } else if (score === 9) {
                     scoreMessage.textContent = "Congratulations! You scored 8 out of 10. You have a good score. To maintain good eyesight, remember to eat a balanced diet rich in fruits and vegetables.";
                 } else if (score === 10) {
                     scoreMessage.textContent = "Congratulations! You scored a perfect 10. You have great eyesight! Keep up the good work and continue to prioritize eye health.";
@@ -154,7 +154,7 @@
             }
 
             retryButton.addEventListener('click', () => {
-                window.location.href = 'index.html';
+                window.location.href = 'index1.html';
             });
         });
 
@@ -166,7 +166,7 @@
 
         setTimeout(() => {
             window.location.href = 'eyestips.html';
-        }, 10000);
+        }, 100000);
     </script>
 </body>
 </html>
