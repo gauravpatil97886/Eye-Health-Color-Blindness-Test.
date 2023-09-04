@@ -85,7 +85,7 @@ function checkGuess() {
     nextBtn.style.display = 'block';
     updateScore();
 
-  
+   ;
 }
 
 
