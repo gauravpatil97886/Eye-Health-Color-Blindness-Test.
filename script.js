@@ -85,8 +85,7 @@ function checkGuess() {
     nextBtn.style.display = 'block';
     updateScore();
 
-    // Automatically load the next image after a short delay (e.g., 2 seconds)
-    setTimeout(nextImage, 2000);
+  
 }
 
 
