@@ -578,3 +578,106 @@
   [data-reveal-hidden] { opacity: 1; transform: none; }
   [data-reveal-group] > *, .reveal { transition: none; }
 }
+
+/* ========================================================== author card
+   A real, prominent credit rather than grey text in a footer. The whole trust
+   argument of this site rests on being able to see who built it and go check
+   what they did, so the name and the source link are given actual weight.
+   ========================================================================== */
+
+.author-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  background: var(--surface-1);
+  border: var(--border-width) solid var(--border-1);
+  border-radius: var(--radius-lg);
+}
+
+.author-card__mark {
+  display: grid;
+  place-items: center;
+  width: 68px; height: 68px;
+  border-radius: var(--radius-md);
+  background: var(--surface-0);
+  border: var(--border-width) solid var(--border-1);
+  color: var(--brand-600);
+  flex: none;
+}
+:root[data-theme="dark"] .author-card__mark { color: var(--brand-400); }
+
+.author-card__body { min-width: 0; }
+
+.author-card__name {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  margin-bottom: var(--space-2);
+}
+
+.author-card__role {
+  color: var(--text-2);
+  max-width: 52ch;
+  margin-bottom: var(--space-4);
+}
+
+.author-card__links { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+.author-card__note {
+  grid-column: 1 / -1;
+  padding-top: var(--space-5);
+  margin-top: var(--space-1);
+  border-top: var(--border-width) solid var(--border-1);
+  font-size: var(--text-sm);
+  color: var(--text-2);
+  max-width: var(--measure);
+}
+
+@media (max-width: 34rem) {
+  .author-card { grid-template-columns: 1fr; }
+}
+
+/* ------------------------------------------------- built index (credits) */
+
+.built-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr));
+  gap: var(--space-3);
+}
+
+.built-tile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--border-1);
+  border-radius: var(--radius-md);
+  background: var(--surface-0);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.built-tile:hover { border-color: var(--border-3); }
+
+.built-tile__media {
+  display: grid;
+  place-items: center;
+  width: 40px; height: 40px;
+  flex: none;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: var(--border-width) solid var(--border-1);
+}
+.built-tile__media .preview { display: block; }
+
+.built-tile__name {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: 1.3;
+}
+
+.site-footer__by { font-size: var(--text-xs); color: var(--text-3); }
+.site-footer__by a { color: var(--text-2); }
+.site-footer__by a:hover { color: var(--text-1); }

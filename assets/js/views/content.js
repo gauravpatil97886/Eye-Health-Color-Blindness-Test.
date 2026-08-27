@@ -6,10 +6,114 @@
  * these pages are written to be read, not skimmed past.
  */
 
-import { h, icon, createView } from '../core/dom.js';
+import { h, s, icon, createView } from '../core/dom.js';
+import { screeningTests, perceptionTests, TOOLS } from '../tests/registry.js';
+import { testPreview } from '../ui/preview.js';
 
 const page = (...children) =>
   createView(h('div.view.container.container--md.section', h('div.stack.stack--xl', ...children)));
+
+const GITHUB_USER = 'https://github.com/gauravpatil97886';
+const GITHUB_REPO = 'https://github.com/gauravpatil97886/Eye-Health-Color-Blindness-Test.';
+
+/**
+ * The author card. Deliberately a real, prominent credit rather than a line of
+ * grey text at the bottom — this is one person's work, done in the open, and
+ * the whole trust argument of the site rests on being able to see who made it
+ * and check what they did.
+ */
+function authorCard() {
+  return h('div.author-card',
+    h('div.author-card__mark',
+      // Must be built with s(), not h(): h() uses createElement, which produces
+      // an HTML <svg> that renders as nothing. SVG needs createElementNS.
+      s('svg', { viewBox: '0 0 24 24', width: 44, height: 44, 'aria-hidden': 'true', focusable: 'false' },
+        s('circle', { cx: 12, cy: 12, r: 8, fill: 'none', stroke: 'currentColor',
+                      'stroke-width': 4, 'stroke-dasharray': '46.3 4',
+                      transform: 'rotate(-3.6 12 12)' }),
+        s('circle', { cx: 12, cy: 12, r: 3.2, fill: 'none', stroke: 'currentColor',
+                      'stroke-width': 1, opacity: 0.45 }),
+        s('circle', { cx: 12, cy: 12, r: 1.4, fill: 'currentColor' }))),
+
+    h('div.author-card__body',
+      h('p.eyebrow', 'Built by'),
+      h('h3.author-card__name', 'Gaurav Patil'),
+      h('p.author-card__role',
+        'Backend engineer. Fovea began as a college project in 2020 and was rebuilt from ' +
+        'scratch in 2026 — new engine, generated plates, twelve checks, and a great deal ' +
+        'more honesty about what a browser can and cannot measure.'),
+      h('div.author-card__links',
+        h('a.btn.btn--secondary.btn--sm', { href: GITHUB_USER, target: '_blank', rel: 'noopener noreferrer' },
+          icon('user', { size: 16 }), 'github.com/gauravpatil97886', icon('external', { size: 12 })),
+        h('a.btn.btn--ghost.btn--sm', { href: GITHUB_REPO, target: '_blank', rel: 'noopener noreferrer' },
+          icon('layers', { size: 16 }), 'Source code', icon('external', { size: 12 })))),
+
+    h('p.author-card__note',
+      'Worth knowing: this is written by a developer working from published sources, not by ' +
+      'a clinician. No optometrist has reviewed it. Every clinical claim on the site is ' +
+      'traceable to a source listed below, and where the research disagreed with itself the ' +
+      'more cautious reading was taken.'));
+}
+
+/** A visual index of everything built, using each test's own stimulus. */
+function builtIndex() {
+  const groups = [
+    ['Vision checks', screeningTests()],
+    ['Eye & brain games', perceptionTests()],
+    ['Tools', TOOLS],
+  ];
+  return h('div.stack.stack--lg',
+    groups.map(([label, items]) =>
+      h('div.stack.stack--sm',
+        h('h3', { style: { fontSize: 'var(--text-base)', color: 'var(--text-2)' } },
+          `${label} · ${items.length}`),
+        h('div.built-grid',
+          items.map((t) =>
+            h('a.built-tile', { href: t.route ?? `#/t/${t.id}` },
+              h('span.built-tile__media', testPreview(t.id, { size: 44 })),
+              h('span.built-tile__name', t.name)))))));
+}
+
+export function creditsView() {
+  return page(
+    h('div.stack.stack--sm',
+      h('p.eyebrow', 'Credits'),
+      h('h1', 'Who built this, and what it was built from')),
+
+    authorCard(),
+
+    h('div.stack.stack--sm',
+      h('h2', { style: { fontSize: 'var(--text-xl)' } }, 'What was built'),
+      h('p.muted', { style: { maxWidth: 'var(--measure)' } },
+        'Twelve checks and two tools, every stimulus generated in the browser. Nothing here ' +
+        'loads a pre-made image — the plates, optotypes, grids and hue circles are all drawn ' +
+        'from the geometry and colour science described below.'),
+      builtIndex()),
+
+    h('div.stack.stack--sm',
+      h('h2', { style: { fontSize: 'var(--text-xl)' } }, 'The research behind it'),
+      h('p.muted', { style: { maxWidth: 'var(--measure)' } },
+        'Each of these shaped a specific decision, and the note says which. Where a figure ' +
+        'appears anywhere on this site, it came from one of them.'),
+      sourceList()),
+
+    h('div.callout.callout--info',
+      h('div.callout__icon', icon('info')),
+      h('div.callout__body',
+        h('p.callout__title', 'Corrections are welcome'),
+        h('p', 'Particularly from anyone with clinical training. Open an issue on the ',
+          h('a', { href: GITHUB_REPO, target: '_blank', rel: 'noopener noreferrer' }, 'repository'),
+          '. Please don’t send screenshots of your results — we don’t want them.'))),
+
+    section('Not affiliated with anyone',
+      'Fovea is independent. It is not affiliated with, endorsed by, or connected to Kanehara ' +
+      'Trading, the Isshinkai Foundation, X-Rite, Pantone, Precision Vision, Good-Lite, ' +
+      'Richmond Products or Lea-Test. Where the names of classic clinical tests appear, they ' +
+      'are used descriptively to explain what a check is modelled on.'),
+
+    section('Licence',
+      'Code is MIT. Written content is CC BY-SA 4.0. Use it, fork it, improve it.'));
+}
 
 export function aboutView() {
   return page(
@@ -29,11 +133,13 @@ export function aboutView() {
       'refuse to render a stimulus the screen cannot draw honestly, and say plainly when a ' +
       'result cannot be trusted.'),
 
-    section('Who built it',
-      'Gaurav Patil, a backend engineer. That is worth knowing: this content is written by a ' +
-      'developer working from published sources, not by a clinician. Every clinical claim is ' +
-      'traceable to a source listed on the methodology page. No optometrist has reviewed it, ' +
-      'and we do not pretend otherwise.'),
+    h('div.stack.stack--sm',
+      h('h2', { style: { fontSize: 'var(--text-xl)' } }, 'Who built it'),
+      authorCard(),
+      h('p', { style: { marginTop: 'var(--space-4)' } },
+        h('a.btn.btn--secondary', { href: '#/credits' },
+          icon('layers', { size: 18 }), 'Credits and the research behind it',
+          icon('arrow-right', { size: 16 })))),
 
     section('What it will never do',
       null,
@@ -197,7 +303,10 @@ export function methodologyView() {
         'What this was built from. Where a figure appears anywhere on this site, it came from ' +
         'one of these — and where the research disagreed with itself, the more cautious ' +
         'reading was taken.'),
-      sourceList()));
+      sourceList()),
+
+    h('p', h('a.btn.btn--secondary', { href: '#/credits' },
+      icon('user', { size: 18 }), 'Credits', icon('arrow-right', { size: 16 }))));
 }
 
 export function learnIndexView() {

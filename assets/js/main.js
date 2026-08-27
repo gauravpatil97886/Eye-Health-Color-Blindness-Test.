@@ -67,6 +67,7 @@ router
        { title: 'Settings' })
 
   .add('/about', lazy(() => import('./views/content.js'), 'aboutView'), { title: 'About' })
+  .add('/credits', lazy(() => import('./views/content.js'), 'creditsView'), { title: 'Credits' })
   .add('/privacy', lazy(() => import('./views/content.js'), 'privacyView'), { title: 'Privacy' })
   .add('/methodology', lazy(() => import('./views/content.js'), 'methodologyView'), { title: 'Methodology' })
   .add('/learn', lazy(() => import('./views/content.js'), 'learnIndexView'), { title: 'Learn' })

@@ -219,7 +219,8 @@ but it measures a different mechanism entirely and calling it stereopsis would b
 
 Every figure quoted on the site traces to one of these, and where the research disagreed with
 itself the more cautious reading was taken. The full annotated list — with a note on *why*
-each one mattered — is on the in-app **/#/methodology** page.
+each one mattered — is on the in-app **[/#/credits](https://gauravpatil97886.github.io/Eye-Health-Color-Blindness-Test./#/credits)**
+page, alongside a visual index of everything that was built.
 
 | Area | Key sources |
 |---|---|
@@ -355,11 +356,18 @@ Code is **MIT**. Written content is **CC BY-SA 4.0**. See [LICENSE.md](LICENSE.m
 ---
 
 <div align="center">
+
+### Built by [Gaurav Patil](https://github.com/gauravpatil97886)
+
+Backend engineer · [github.com/gauravpatil97886](https://github.com/gauravpatil97886)
+
 <sub>
 
-Built by **[Gaurav Patil](https://github.com/gauravpatil97886)**
-<br>
-Originally a college project from 2020, rebuilt from scratch in 2026.
+Fovea began as a college project in 2020 and was rebuilt from scratch in 2026 —
+new engine, generated plates, twelve checks, and a great deal more honesty about
+what a browser can and cannot measure.
+
+Full credits and research sources: **[/#/credits](https://gauravpatil97886.github.io/Eye-Health-Color-Blindness-Test./#/credits)**
 
 </sub>
 </div>
