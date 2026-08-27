@@ -6,6 +6,18 @@
  * product explaining itself in a single gesture: drag the slider and you
  * experience the exact thing the colour test measures.
  *
+ * IT ANIMATES ITSELF ONCE, then stops.
+ *
+ * On load the mosaic assembles from the foveal centre outward — which is the
+ * order the anatomy actually runs in, finest cones first — and then performs a
+ * single slow sweep of the dichromat transform, so the hidden figure dissolves
+ * and comes back without anyone touching anything. That one gesture explains
+ * what the whole site is about faster than any paragraph.
+ *
+ * It runs ONCE and settles. Nothing here loops: WCAG 2.2.2 exempts motion that
+ * stops within five seconds, and a hero that pulses forever is an irritation
+ * rather than an explanation. Reduced motion skips straight to the final frame.
+ *
  * The anatomy is real, not decorative:
  *
  *   density      cone diameter grows with eccentricity, so the mosaic is
@@ -98,35 +110,113 @@ export function createMosaic(canvas, {
     cells.get(k).push(cone);
   }
 
-  let severity = 0;
+  // Sort by eccentricity so the assembly can sweep outward from the centre.
+  cones.sort((a, b) => Math.hypot(a.x, a.y) - Math.hypot(b.x, b.y));
+  const maxEcc = Math.hypot(cones.at(-1)?.x ?? 1, cones.at(-1)?.y ?? 1) || 1;
 
-  function draw() {
+  let severity = 0;
+  let reveal = 1;          // 0 = nothing drawn, 1 = fully assembled
+  let raf = null;
+  let disposed = false;
+
+  /**
+   * @param {number} r  assembly progress 0..1
+   * Each cone has its own threshold based on eccentricity, so the mosaic grows
+   * outward rather than fading in as one flat layer.
+   */
+  function draw(r = reveal) {
     ctx.fillStyle = '#949494';   // achromatic equivalent of the mosaic luminance
     ctx.fillRect(0, 0, size, size);
     ctx.save();
     ctx.translate(radius, radius);
 
+    // Ease the wavefront so it decelerates as it reaches the rim.
+    const front = (1 - (1 - r) ** 2) * 1.18;
+
     for (const cone of cones) {
+      const ecc = Math.hypot(cone.x, cone.y) / maxEcc;
+      const local = (front - ecc) / 0.18;          // 0 -> 1 across a soft edge
+      if (local <= 0) continue;
+      const grow = local >= 1 ? 1 : local;
+
       const rgb = severity > 0 ? simulate(cone.rgb, 'deutan', severity) : cone.rgb;
+      ctx.globalAlpha = grow;
       ctx.beginPath();
-      ctx.arc(cone.x, cone.y, cone.r, 0, Math.PI * 2);
+      ctx.arc(cone.x, cone.y, cone.r * (0.55 + 0.45 * grow), 0, Math.PI * 2);
       ctx.fillStyle = rgbToHex(rgb);
       ctx.fill();
     }
 
+    ctx.globalAlpha = 1;
     ctx.restore();
+  }
+
+  /** Assemble, then sweep the deficiency once, then settle. Runs once. */
+  function play({ onSeverity } = {}) {
+    if (disposed) return;
+
+    const ASSEMBLE = 1100;
+    const HOLD = 380;
+    const SWEEP = 2100;
+    const PEAK = 0.9;
+    const start = performance.now();
+
+    const tick = (now) => {
+      if (disposed) return;
+      const t = now - start;
+
+      if (t < ASSEMBLE) {
+        reveal = t / ASSEMBLE;
+        severity = 0;
+      } else if (t < ASSEMBLE + HOLD) {
+        reveal = 1;
+        severity = 0;
+      } else if (t < ASSEMBLE + HOLD + SWEEP) {
+        reveal = 1;
+        // Out and back on a sine, so it eases at both ends and at the peak.
+        const p = (t - ASSEMBLE - HOLD) / SWEEP;
+        severity = Math.sin(p * Math.PI) * PEAK;
+      } else {
+        reveal = 1;
+        severity = 0;
+        draw();
+        onSeverity?.(0);
+        raf = null;
+        return;                                  // settled — nothing loops
+      }
+
+      draw();
+      onSeverity?.(severity);
+      raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
   }
 
   draw();
 
   return {
     cones: cones.length,
+    play,
+    /** Cancels the intro; any user interaction should call this first. */
+    stop() {
+      if (raf) cancelAnimationFrame(raf);
+      raf = null;
+      reveal = 1;
+    },
+    get playing() { return raf !== null; },
     /** @param {number} value 0 = normal trichromat, 1 = full deuteranopia */
     setSeverity(value) {
       severity = Math.max(0, Math.min(1, value));
+      reveal = 1;
       draw();
     },
     get severity() { return severity; },
+    destroy() {
+      disposed = true;
+      if (raf) cancelAnimationFrame(raf);
+      raf = null;
+    },
   };
 }
 

@@ -14,6 +14,7 @@ import { createMosaic } from '../ui/mosaic.js';
 import { testCard, toolCard } from '../ui/cards.js';
 import { createMarquee } from '../ui/marquee.js';
 import { initReveal } from '../ui/reveal.js';
+import { prefersReducedMotion } from '../core/prefs.js';
 
 export function landingView() {
   const canvas = h('canvas.mosaic__canvas', { width: 480, height: 480 });
@@ -138,15 +139,37 @@ export function landingView() {
       return;
     }
 
+    const label = (pct) => pct === 0
+      ? '0% — typical colour vision'
+      : pct >= 98
+        ? '100% — full deuteranopia'
+        : `${pct}% — deuteranomaly`;
+
     view.listen(slider, 'input', () => {
+      // Any interaction wins immediately — the intro is a demonstration, not
+      // something to sit through.
+      mosaic.stop();
       const pct = Number(slider.value);
       mosaic.setSeverity(pct / 100);
-      readout.textContent = pct === 0
-        ? '0% — typical colour vision'
-        : pct >= 98
-          ? '100% — full deuteranopia'
-          : `${pct}% — deuteranomaly`;
+      readout.textContent = label(pct);
     });
+    view.listen(slider, 'pointerdown', () => mosaic.stop());
+    view.listen(slider, 'keydown', () => mosaic.stop());
+
+    view.onDestroy(() => mosaic.destroy());
+
+    // Assemble from the fovea outward, then sweep the deficiency once so the
+    // hidden figure dissolves and returns without anyone touching anything.
+    // Runs once and settles; reduced motion skips it entirely.
+    if (!prefersReducedMotion()) {
+      mosaic.play({
+        onSeverity(v) {
+          const pct = Math.round(v * 100);
+          slider.value = String(pct);
+          readout.textContent = label(pct);
+        },
+      });
+    }
   });
 
   return view;
