@@ -116,22 +116,45 @@ export function methodologyView() {
     h('p.lede', 'Everything below is deliberately specific enough to argue with.'),
 
     section('Colour vision plates',
-      'Plates are generated in your browser rather than loaded as images. Figure and ground ' +
-      'colours are placed on a confusion line — the set of colours a given deficiency cannot ' +
-      'tell apart — derived from the null space of the Brettel–Viénot–Mollon simulation, so ' +
-      'the generator and its validator use the same model. Because a confusion line is not ' +
-      'equiluminant, each dot’s lightness is scattered by more than the systematic ' +
-      'figure/ground difference, which is what stops the figure being readable by brightness. ' +
-      'Every plate is checked before display and rejected if the figure would still be ' +
-      'separable to its target deficiency.'),
+      'Twelve plates, generated in your browser rather than loaded as images: one ' +
+      'demonstration plate everyone can read, and eleven where the figure is visible to ' +
+      'typical colour vision but not to one specific deficiency. Protan and deutan carry ' +
+      'equal weight, with a smaller tritan block. Figure and ground colours sit on a ' +
+      'confusion line — the set of colours a given deficiency cannot tell apart — derived ' +
+      'from the null space of the Brettel–Viénot–Mollon simulation, so the generator and its ' +
+      'validator provably agree. Every plate is checked before it is shown and rejected if ' +
+      'the figure would still be separable to the deficiency it targets.'),
+
+    section('Why there are twelve and not twenty-four',
+      'An earlier build had 24 plates across four classes. Two classes were removed after ' +
+      'rendering them and looking honestly at the output. “Diagnostic” plates carried two ' +
+      'overlapping figures, meaning to show a different digit to each deficiency type — ' +
+      'quantised into dots they were unreadable mush. “Hidden” plates, meant to be visible ' +
+      'only to a deficiency, leaked: the figure stayed partly visible to typical vision, so ' +
+      'they measured nothing reliable. Twelve legible plates beat twenty-four where a third ' +
+      'are noise.'),
+
+    section('On mottle, and a mistake worth recording',
+      'Travelling along a confusion line changes brightness as a typical trichromat measures ' +
+      'it. It is tempting to conclude the figure could be read by brightness alone and to ' +
+      'mask it with heavy per-dot lightness scatter. That is wrong, and doing it wrecks the ' +
+      'test. Both members of the pair simulate to the same colour for the target deficiency, ' +
+      'brightness included — the measured difference after simulation is 0.0000 for protan. ' +
+      'The luminance difference reaches only a typical trichromat, and for them it is part of ' +
+      'the signal. An early version of this app scaled the scatter to that difference and ' +
+      'quietly erased its own figures, worst on protan plates, which have the largest ' +
+      'difference. The mottle is now a small fixed amount, and a test asserts it stays well ' +
+      'below the figure/ground gap.'),
 
     section('How the plates are scored',
-      'Vanishing plates score normally. Hidden plates score inverted — reading the figure is ' +
-      'the atypical response, and treating it as “correct” is a common bug that misclassifies ' +
-      'people with typical colour vision. Type-identifying plates are excluded from the pass ' +
-      'count and used only to weigh protan against deutan. Agreement at or above 81% reads as ' +
-      'typical; 62% or below indicates a difference; the band between is reported as ' +
-      'inconclusive, because that is the honest answer there.'),
+      'A run is judged on its WORST axis, not on the overall score. With plates balanced ' +
+      'across three axes, someone with a strong single-axis deficiency misses only about a ' +
+      'third of the set; their overall ratio lands mid-band and reads as inconclusive even ' +
+      'though the pattern is unmistakable — every plate on one axis missed, every plate on ' +
+      'the others read. Averaging dilutes exactly the signal that matters. Missing 60% or ' +
+      'more of one axis indicates a difference; 25% or less on every axis reads as typical; ' +
+      'in between is reported as inconclusive, because that is the honest answer there. The ' +
+      'demonstration plate is a control rather than a question: failing it voids the run.'),
 
     section('Why plates are generated fresh every session',
       'A fixed set of plate images can be memorised, reverse-image-searched, or read straight ' +
@@ -152,10 +175,29 @@ export function methodologyView() {
       'otherwise is measuring its own output. We ask instead, and record your answer alongside ' +
       'the result.'),
 
-    section('Sources',
-      'Brettel, Viénot & Mollon (1997) on dichromat simulation; Viénot et al. (1999); Machado, ' +
-      'Oliveira & Fernandes (2009) on severity-parameterised simulation; ISO 8596 for Landolt ' +
-      'ring geometry; ISO/IEC 7810 ID-1 for the calibration card dimensions.'));
+    h('div.callout.callout--watch',
+      h('div.callout__icon', icon('alert')),
+      h('div.callout__body',
+        h('p.callout__title', 'How accurate is this, honestly?'),
+        h('p',
+          'Not 100%, and nothing on a web page could be. Every check here runs on a display ' +
+          'whose brightness, colour profile and filters cannot be measured, at a distance we ' +
+          'have to take your word for, in lighting we cannot see. Published comparisons of ' +
+          'screen-based colour plate tests against the printed booklet put sensitivity around ' +
+          '94–96% and specificity around 82–95% — good enough to be worth doing, nowhere near ' +
+          'good enough to decide anything on.'),
+        h('p', { style: { marginTop: 'var(--space-3)' } },
+          'Treat a result here as a reason to book an appointment, or a reason not to worry ' +
+          'much — never as an answer. The one thing we can promise is that where this tool ' +
+          'does not know something, it says so instead of guessing.'))),
+
+    h('div.stack.stack--sm',
+      h('h2', { style: { fontSize: 'var(--text-xl)' } }, 'Sources'),
+      h('p.muted', { style: { maxWidth: 'var(--measure)' } },
+        'What this was built from. Where a figure appears anywhere on this site, it came from ' +
+        'one of these — and where the research disagreed with itself, the more cautious ' +
+        'reading was taken.'),
+      sourceList()));
 }
 
 export function learnIndexView() {
@@ -194,6 +236,88 @@ export function learnArticleView({ params }) {
       'It is listed on the index so the plan is visible rather than hidden. Writing health ' +
       'content properly means sourcing every factual claim, and that has not been done for ' +
       'this one yet — so there is nothing here rather than something unsourced.'));
+}
+
+const SOURCES = [
+  ['Colour vision simulation', [
+    ['Brettel, Viénot & Mollon (1997) — Computerized simulation of color appearance for dichromats',
+     'https://doi.org/10.1364/JOSAA.14.002647',
+     'The two half-plane model this app uses. The widely-copied single-matrix shortcut is a fair approximation for protan and deutan but not for tritan.'],
+    ['Viénot, Brettel & Mollon (1999) — Digital video colourmaps for checking the legibility of displays by dichromats',
+     'https://doi.org/10.1002/(SICI)1520-6378(199908)24:4<243::AID-COL5>3.0.CO;2-3',
+     'The single-plane simplification, and the reason it is not used here for tritan.'],
+    ['Machado, Oliveira & Fernandes (2009) — A physiologically-based model for simulation of color vision deficiency',
+     'https://www.inf.ufrgs.br/~oliveira/pubs_files/CVD_Simulation/CVD_Simulation.html',
+     'Severity-parameterised matrices, and a useful acceptance test: every row must sum to 1 and grey must be invariant.'],
+  ]],
+  ['Colour vision testing', [
+    ['Ishihara plate instructions (Kanehara) — 38, 24 and 14 plate editions',
+     'https://web.stanford.edu/group/vista/wikiupload/0/0a/Ishihara.14.Plate.Instructions.pdf',
+     'Plate classes, the official pass thresholds, and the deliberate indeterminate band that most online versions collapse into a binary.'],
+    ['Validation of Ishihara presentation on a smartphone vs a calibrated monitor (2024)',
+     'https://pmc.ncbi.nlm.nih.gov/articles/PMC11287189/',
+     'Where the 94–96% sensitivity figure above comes from.'],
+    ['A proposed correction in the weighted method to score the Ishihara test',
+     'https://pmc.ncbi.nlm.nih.gov/articles/PMC6537449/',
+     'Plate-category grouping and weighted scoring.'],
+  ]],
+  ['Optotypes and acuity', [
+    ['ISO 8596 — Ophthalmic optics: visual acuity testing, standard optotype',
+     'https://www.iso.org/standard/69042.html',
+     'The Landolt ring construction used here: outer diameter 5 units, stroke 1, gap 1, eight orientations.'],
+    ['Bailey & Lovie (1976) — New design principles for visual acuity letter charts',
+     'https://doi.org/10.1097/00006324-197611000-00006',
+     'The logMAR progression, 0.1 log units per line — also the ratio this site’s type scale steps by.'],
+    ['ISO/IEC 7810 ID-1',
+     'https://www.iso.org/standard/70483.html',
+     'The 85.60 × 53.98 mm card dimensions the screen calibration matches against.'],
+  ]],
+  ['Contrast and psychophysics', [
+    ['Allard & Faubert (2008) — The noisy-bit method for digital displays',
+     'https://doi.org/10.3758/BRM.40.3.735',
+     'Dithering below the visible level so an 8-bit screen can present contrasts finer than one code value. Without it the contrast test measures the panel, not the eye.'],
+    ['Campbell & Robson (1968) — Application of Fourier analysis to the visibility of gratings',
+     'https://pmc.ncbi.nlm.nih.gov/articles/PMC1351748/',
+     'The spatial-frequency channels result underneath contrast sensitivity.'],
+    ['García-Pérez (1998) — Forced-choice staircases with fixed step sizes',
+     'https://doi.org/10.1016/S0042-6989(97)00340-4',
+     'Why the staircases here use 1-up/2-down and 1-up/3-down rather than the simple 1-up/1-down.'],
+  ]],
+  ['Anatomy and the blind spot', [
+    ['Rohrschneider (2004) — Determination of the location of the fovea on the fundus',
+     'https://doi.org/10.1167/iovs.03-1157',
+     'The blind spot centre at 15.5° temporal, 1.5° below the meridian, and the 13–18° spread across individuals.'],
+    ['Ramachandran & Gregory (1991) — Perceptual filling in of artificially induced scotomas',
+     'https://doi.org/10.1038/350699a0',
+     'Why a line drawn through your blind spot still looks unbroken.'],
+  ]],
+  ['Accessibility and safety', [
+    ['WCAG 2.2',
+     'https://www.w3.org/TR/WCAG22/',
+     'The conformance target for all chrome, instructions and results — with a documented exception for the test stimuli themselves, where low contrast is the measurement.'],
+    ['MHRA — Guidance on medical device stand-alone software including apps',
+     'https://www.gov.uk/government/publications/medical-devices-software-applications-apps',
+     'Intended use decides regulatory status, not disclaimer text. This is why the site says “check” rather than “screening” and never mentions occupational fitness.'],
+  ]],
+];
+
+function sourceList() {
+  return h('div.stack.stack--lg',
+    SOURCES.map(([group, items]) =>
+      h('div.stack.stack--sm',
+        h('h3', { style: { fontSize: 'var(--text-base)', color: 'var(--text-2)' } }, group),
+        h('ul.stack.stack--sm',
+          items.map(([title, url, why]) =>
+            h('li', {
+              style: {
+                paddingLeft: 'var(--space-4)',
+                borderLeft: '2px solid var(--border-1)',
+              },
+            },
+              h('a', { href: url, target: '_blank', rel: 'noopener noreferrer' },
+                title, ' ', icon('external', { size: 12 })),
+              h('p.muted', { style: { fontSize: 'var(--text-sm)', marginTop: 'var(--space-1)' } },
+                why)))))));
 }
 
 function section(heading, body, ...extra) {

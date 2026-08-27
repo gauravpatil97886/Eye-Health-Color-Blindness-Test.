@@ -64,22 +64,36 @@ export function createMask({ radius, kind, value, scale = 0.62 }) {
 }
 
 /**
- * Numerals are drawn with a heavy geometric face and tracked apart slightly —
- * the figure has to survive being chopped into dots, so thin strokes and tight
- * spacing both read as noise.
+ * Numerals are drawn with a heavy geometric face — the figure has to survive
+ * being chopped into dots, so thin strokes read as noise.
+ *
+ * SIZED BY HEIGHT, NOT WIDTH. Fitting the string to a fixed width makes a
+ * two-digit figure squat and half the height of a one-digit figure, which is
+ * exactly why two-digit plates were the hard ones to read. Height is set first
+ * so every figure has the same stroke weight, and width is only used as a
+ * fallback clamp for the rare string that would overflow the disc.
  */
 function drawDigits(ctx, text, span) {
   const stack = '"Archivo Black", "Arial Black", Impact, system-ui, sans-serif';
-  let fontSize = span;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
-  // Shrink until the whole string fits the target span.
-  for (let i = 0; i < 24; i++) {
+  // `span` is the plate diameter times the figure scale. Cap height at ~0.72 of
+  // the font size for this class of face.
+  let fontSize = span / 0.72;
+
+  // Two digits need a little tracking or the strokes merge once dot-quantised.
+  if (text.length > 1) ctx.letterSpacing = `${fontSize * 0.06}px`;
+  else ctx.letterSpacing = '0px';
+
+  // Clamp only if the string would run outside the usable chord of the disc.
+  const maxWidth = span * 1.62;
+  for (let i = 0; i < 12; i++) {
     ctx.font = `900 ${fontSize}px ${stack}`;
     const w = ctx.measureText(text).width;
-    if (w <= span) break;
-    fontSize *= span / w * 0.98;
+    if (w <= maxWidth) break;
+    fontSize *= (maxWidth / w) * 0.98;
+    if (text.length > 1) ctx.letterSpacing = `${fontSize * 0.06}px`;
   }
 
   ctx.font = `900 ${fontSize}px ${stack}`;
@@ -87,6 +101,7 @@ function drawDigits(ctx, text, span) {
   const m = ctx.measureText(text);
   const capMid = (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
   ctx.fillText(text, 0, capMid);
+  ctx.letterSpacing = '0px';
 }
 
 function drawShape(ctx, name, span) {

@@ -89,20 +89,24 @@ function normalise(v) {
 /**
  * Build a pair of colours that a given deficiency cannot tell apart.
  *
- * ON LUMINANCE — the subtle part, and the part naive generators get wrong.
+ * ON LUMINANCE — and the trap that is easy to fall into here.
  *
- * A confusion direction is NOT equiluminant, and it cannot be made so: the
- * confusion line is one-dimensional and the equiluminant plane is
- * two-dimensional, so in general they meet at a single point. A protanope is
- * missing L cones, and L cones contribute to luminance, so travelling along a
- * protan confusion line necessarily changes brightness for a normal observer.
+ * Travelling along a confusion line changes brightness AS A NORMAL TRICHROMAT
+ * MEASURES IT: the protan direction has a large luminance component, because
+ * L cones contribute most of luminance. It is tempting to conclude that the
+ * figure could be read from brightness alone and must therefore be masked with
+ * heavy per-dot lightness jitter.
  *
- * Real plates resolve this exactly the way we do: not by forcing equal
- * luminance, but by scattering each dot's lightness randomly by MORE than the
- * systematic figure/ground difference. Luminance then carries no reliable
- * signal about where the figure is, which is what "pseudoisochromatic" —
- * falsely of the same colour — actually means. `requiredJitter` below reports
- * how much scatter this particular pair needs.
+ * That is wrong, and masking it destroys the test. The pair members map to the
+ * SAME simulated colour for the target deficiency — same hue and same
+ * brightness (measured: luminance difference after simulation is 0.0000 for
+ * protan, 0.0008 for deutan). The deficient observer has no brightness cue
+ * either. The luminance difference exists only for a normal trichromat, and for
+ * them it is not a leak — it is part of the signal they are supposed to use.
+ *
+ * So jitter here is for visual character only: real plates are mottled, and a
+ * little scatter keeps the figure edge dot-quantised rather than drawn. It is a
+ * small fixed amount, deliberately NOT scaled to the luminance difference.
  */
 export function confusionPair(baseHex, type, { spread = 0.34 } = {}) {
   const base = rgbToLinear(hexToRgb(baseHex));
@@ -130,10 +134,12 @@ export function confusionPair(baseHex, type, { spread = 0.34 } = {}) {
     separation: t,
     /** How different the pair looks to NORMAL vision (higher = easier plate). */
     normalDelta: oklabDistance(hexA, hexB),
-    /** Systematic brightness difference the dot jitter has to bury. */
+    /**
+     * Brightness difference AS SEEN BY A NORMAL TRICHROMAT. Reported for
+     * diagnostics only — it is not a leak to be masked, because the target
+     * deficiency perceives no brightness difference at all (see above).
+     */
     luminanceDelta: lumDelta,
-    /** Per-dot lightness scatter needed so luminance stops being a cue. */
-    requiredJitter: lumDelta * 2.5,
   };
 }
 
@@ -177,7 +183,6 @@ export function confusionPalettes(baseHex, type, { spread = 0.09, steps = 4 } = 
     ground: sample(-t, -t * 0.45),
     luminanceDelta: pair.luminanceDelta,
     normalDelta: pair.normalDelta,
-    requiredJitter: pair.requiredJitter,
   };
 }
 
@@ -198,17 +203,19 @@ function oklabDistance(hexA, hexB) {
  *   3. separation under the OTHER TWO deficiencies >= 0.10, so a protan can
  *      still read a deutan plate and vice versa. Without this the plate set
  *      could detect that something is wrong but never say which type.
- *   4. systematic luminance difference <= 0.042, so the dot jitter needed to
- *      bury it stays under 0.10 OKLab lightness and the plate does not turn
- *      into visual noise.
  *
- * Achieved normal-vision separation: protan 0.23-0.26, deutan 0.29-0.31,
- * tritan 0.36 — roughly 3x what a naive mid-grey seed produces.
+ * There is deliberately NO constraint on luminance difference. An earlier
+ * version capped it, on the mistaken belief that the difference had to be
+ * masked with jitter — see the note on `confusionPair`. Dropping that
+ * constraint roughly doubled the achievable legibility.
+ *
+ * Achieved normal-vision separation: protan 0.30-0.34, deutan 0.31-0.35,
+ * tritan 0.36-0.38 — around 4x what a naive mid-grey seed produces.
  */
 export const PLATE_SEEDS = {
-  protan: ['#70290f', '#70330f', '#703d0f', '#66240f'],
-  deutan: ['#8a5c1a', '#945c1a', '#8a661a', '#805714'],
-  tritan: ['#47429e', '#52429e', '#5c429e', '#474d9e'],
+  protan: ['#9e3d0d', '#9e4d0d', '#9e5c0d', '#8f380d'],
+  deutan: ['#996621', '#a86621', '#997521', '#8a5c17'],
+  tritan: ['#47429c', '#57429c', '#66429c', '#47529c'],
 };
 
 /* ============================================================ simulation */

@@ -1,33 +1,43 @@
 /**
  * Fovea — colour vision plate test: presentation logic and scoring.
  *
- * The scoring follows the structure of the classic clinical rule rather than
- * the naive "count the right answers" that most web versions use. Three things
- * matter and are routinely got wrong:
+ * TWO THINGS THAT MATTER
  *
- *  1. HIDDEN PLATES SCORE INVERTED. On a hidden plate, reading the figure is
- *     the abnormal response. A scorer that marks it "correct" misclassifies
- *     people with typical colour vision.
+ *  1. THERE IS A DELIBERATE INCONCLUSIVE BAND. Between "typical" and
+ *     "difference indicated" sits a gap where the honest output is that a plate
+ *     test cannot tell. Collapsing it into a binary verdict is how a self-check
+ *     starts making claims it cannot support.
  *
- *  2. DIAGNOSTIC PLATES ARE EXCLUDED FROM THE PASS COUNT. They establish which
- *     type once a deficiency is already indicated; folding them into the total
- *     double-counts the same evidence.
+ *  2. THE DEMONSTRATION PLATE IS A CONTROL, not a question. Everyone reads it
+ *     regardless of colour vision, so failing it means the task was
+ *     misunderstood, the screen was not showing the plate, or the run was
+ *     rushed — and the whole thing is void rather than scored.
  *
- *  3. THERE IS A DELIBERATE INDETERMINATE BAND. The clinical rule leaves a gap
- *     between "typical" and "deficient" where the honest output is "this test
- *     cannot tell". Collapsing that gap into a binary verdict is how a
- *     screening tool starts making claims it cannot support.
- *
- * The demonstration plate is a control: everyone reads it regardless of colour
- * vision, so failing it means the user misunderstood the task, could not see
- * the screen, or was not really trying — and the whole run is void.
+ * TYPE ATTRIBUTION comes from comparing miss rates across plates targeted at
+ * each axis: someone who misses the protan-targeted plates but reads the
+ * deutan-targeted ones fits a protan pattern. An earlier design used dedicated
+ * two-figure "diagnostic" plates for this; they rendered as unreadable mush and
+ * were removed. Miss-rate comparison needs no special plate and works.
  */
 
 import { buildPlateSet } from '../plate/generator.js';
 
-/** Fractions taken from the clinical thresholds (17/21 and 13/21). */
-const TYPICAL_AT_OR_ABOVE = 0.81;
-const DEFICIENT_AT_OR_BELOW = 0.62;
+/**
+ * The verdict is decided PER AXIS, not on the overall score.
+ *
+ * With plates balanced across protan, deutan and tritan, someone with a strong
+ * single-axis deficiency misses only the plates on their own axis — about a
+ * third of the set. Their overall ratio then lands mid-band and reads as
+ * "inconclusive" even though the pattern is unmistakable: they missed every
+ * plate on one axis and read every plate on the others. Averaging across axes
+ * dilutes exactly the signal that matters.
+ *
+ * So a run is judged on its WORST axis. Missing most of one axis while reading
+ * the rest is the signature of a colour vision difference, and it is far more
+ * informative than the total.
+ */
+const AXIS_MISS_INDICATED = 0.60;   // most of one axis missed
+const AXIS_MISS_TYPICAL = 0.25;     // at most the odd slip on any axis
 
 export function createPlateSession({ count = 24, figureKind = 'digits', sessionSeed } = {}) {
   const plates = buildPlateSet({
@@ -60,8 +70,6 @@ export function scorePlateSession(session) {
   const tally = {
     demonstration: { presented: 0, correct: 0 },
     vanishing: { presented: 0, correct: 0 },
-    hidden: { presented: 0, readFigure: 0 },
-    diagnostic: { presented: 0, protan: 0, deutan: 0, both: 0, neither: 0 },
   };
   const axisMisses = { protan: 0, deutan: 0, tritan: 0 };
   const axisPresented = { protan: 0, deutan: 0, tritan: 0 };
@@ -70,49 +78,19 @@ export function scorePlateSession(session) {
     const response = session.responses.get(plate.id) ?? { answer: null, ms: null };
     const given = response.answer;
     const expected = String(plate.figure).toLowerCase();
-    const alt = plate.altFigure ? String(plate.altFigure).toLowerCase() : null;
 
     let outcome;
 
-    switch (plate.plateClass) {
-      case 'demonstration':
-        tally.demonstration.presented++;
-        outcome = given === expected ? 'correct' : 'incorrect';
-        if (outcome === 'correct') tally.demonstration.correct++;
-        break;
-
-      case 'vanishing':
-        tally.vanishing.presented++;
-        axisPresented[plate.targets]++;
-        outcome = given === expected ? 'correct' : 'missed';
-        if (outcome === 'correct') tally.vanishing.correct++;
-        else axisMisses[plate.targets]++;
-        break;
-
-      case 'hidden':
-        // Inverted: reporting the figure is the atypical response.
-        tally.hidden.presented++;
-        outcome = given === expected ? 'read-hidden-figure' : 'saw-nothing';
-        if (outcome === 'read-hidden-figure') {
-          tally.hidden.readFigure++;
-          axisMisses[plate.targets] += 0.5; // weaker evidence than a vanishing miss
-          axisPresented[plate.targets] += 0.5;
-        }
-        break;
-
-      case 'diagnostic':
-        // primary is hidden along the protan line, so reading it implies deutan;
-        // secondary is hidden along the deutan line, so reading it implies protan.
-        tally.diagnostic.presented++;
-        if (given === expected && given === alt) outcome = 'both';
-        else if (given === expected) { tally.diagnostic.deutan++; outcome = 'deutan-consistent'; }
-        else if (given === alt) { tally.diagnostic.protan++; outcome = 'protan-consistent'; }
-        else if (given == null) { tally.diagnostic.neither++; outcome = 'no-answer'; }
-        else { tally.diagnostic.neither++; outcome = 'other'; }
-        break;
-
-      default:
-        outcome = 'unscored';
+    if (plate.plateClass === 'demonstration') {
+      tally.demonstration.presented++;
+      outcome = given === expected ? 'correct' : 'incorrect';
+      if (outcome === 'correct') tally.demonstration.correct++;
+    } else {
+      tally.vanishing.presented++;
+      axisPresented[plate.targets]++;
+      outcome = given === expected ? 'correct' : 'missed';
+      if (outcome === 'correct') tally.vanishing.correct++;
+      else axisMisses[plate.targets]++;
     }
 
     perPlate.push({
@@ -120,7 +98,6 @@ export function scorePlateSession(session) {
       plateClass: plate.plateClass,
       targets: plate.targets ?? null,
       expected: plate.figure,
-      alternate: plate.altFigure ?? null,
       given: given ?? null,
       outcome,
       ms: response.ms ?? null,
@@ -131,19 +108,26 @@ export function scorePlateSession(session) {
 
   const controlPassed = tally.demonstration.presented === 0 || tally.demonstration.correct > 0;
 
-  const scoreable = tally.vanishing.presented + tally.hidden.presented;
-  const typicalResponses = tally.vanishing.correct + (tally.hidden.presented - tally.hidden.readFigure);
+  const scoreable = tally.vanishing.presented;
+  const typicalResponses = tally.vanishing.correct;
   const ratio = scoreable > 0 ? typicalResponses / scoreable : 0;
+
+  const axisRates = {
+    protan: axisPresented.protan ? axisMisses.protan / axisPresented.protan : 0,
+    deutan: axisPresented.deutan ? axisMisses.deutan / axisPresented.deutan : 0,
+    tritan: axisPresented.tritan ? axisMisses.tritan / axisPresented.tritan : 0,
+  };
+  const worstAxisRate = Math.max(axisRates.protan, axisRates.deutan, axisRates.tritan);
 
   let verdict;
   if (!controlPassed) verdict = 'void';
-  else if (ratio >= TYPICAL_AT_OR_ABOVE) verdict = 'typical';
-  else if (ratio <= DEFICIENT_AT_OR_BELOW) verdict = 'difference-indicated';
+  else if (worstAxisRate >= AXIS_MISS_INDICATED) verdict = 'difference-indicated';
+  else if (worstAxisRate <= AXIS_MISS_TYPICAL) verdict = 'typical';
   else verdict = 'inconclusive';
 
   /* ---------------------------------------------------------- the axis */
 
-  const axisEvidence = normaliseAxis(axisMisses, axisPresented, tally.diagnostic);
+  const axisEvidence = normaliseAxis(axisMisses, axisPresented);
   const axis = pickAxis(axisEvidence, verdict);
 
   return {
@@ -152,6 +136,8 @@ export function scorePlateSession(session) {
     verdict,
     controlPassed,
     ratio,
+    axisRates,
+    worstAxisRate,
     counts: {
       scoreable,
       typicalResponses,
@@ -159,20 +145,16 @@ export function scorePlateSession(session) {
     },
     axisEvidence,
     axis,
-    severity: estimateSeverity(ratio, verdict),
+    severity: estimateSeverity(worstAxisRate, verdict),
     perPlate,
     summary: summarise(verdict, axis),
   };
 }
 
-function normaliseAxis(misses, presented, diagnostic) {
-  // Vanishing misses give a rate per axis; diagnostic plates give a direct vote.
+function normaliseAxis(misses, presented) {
+  // Miss RATE per axis, not raw count — the axes carry different plate counts.
   const rate = (k) => (presented[k] > 0 ? misses[k] / presented[k] : 0);
-  const raw = {
-    protan: rate('protan') + diagnostic.protan * 0.5,
-    deutan: rate('deutan') + diagnostic.deutan * 0.5,
-    tritan: rate('tritan'),
-  };
+  const raw = { protan: rate('protan'), deutan: rate('deutan'), tritan: rate('tritan') };
   const total = raw.protan + raw.deutan + raw.tritan;
   if (total === 0) return { protan: 0, deutan: 0, tritan: 0 };
   return {
@@ -211,10 +193,14 @@ function pickAxis(evidence, verdict) {
  * A plate test separates "likely a difference" from "likely not" far better
  * than it grades how strong that difference is.
  */
-function estimateSeverity(ratio, verdict) {
+function estimateSeverity(worstAxisRate, verdict) {
   if (verdict !== 'difference-indicated') return null;
-  const band = ratio > 0.5 ? 'slight' : ratio > 0.3 ? 'moderate' : 'strong';
-  return { band, confidence: 'low', basis: 'proportion of plates read as expected' };
+  const band = worstAxisRate >= 0.95 ? 'strong' : worstAxisRate >= 0.75 ? 'moderate' : 'slight';
+  return {
+    band,
+    confidence: 'low',
+    basis: 'share of plates missed on the affected axis',
+  };
 }
 
 function summarise(verdict, axis) {

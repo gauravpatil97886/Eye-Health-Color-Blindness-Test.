@@ -91,7 +91,13 @@ export function reportView({ params }) {
         h('p', h('strong', 'A clear result is not a clean bill of health. '),
           'Glaucoma, diabetic retinopathy and several other conditions cause no symptoms ' +
           'until they are advanced, and none of them are detectable by any test on this site. ' +
-          'Please have a proper eye examination regardless of what this says.')),
+          'Please have a proper eye examination regardless of what this says.'),
+        h('p', { style: { marginTop: 'var(--space-3)' } },
+          h('strong', 'This is not 100% accurate. '),
+          'Published comparisons of screen-based colour plate tests against printed booklets ' +
+          'put sensitivity around 94–96% and specificity around 82–95%. The method, its ' +
+          'limits and its sources are published at ',
+          h('span.mono', { style: { fontSize: 'var(--text-xs)' } }, '/#/methodology'), '.')),
 
       h('div.stack.stack--sm',
         h('h2', 'Results'),

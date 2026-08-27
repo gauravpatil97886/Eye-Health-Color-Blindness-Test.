@@ -40,7 +40,11 @@ export function testResultView({ params }) {
           'at — it cannot confirm or rule out anything.'),
         h('p', h('strong', 'A clear result is not reassurance. '),
           'Several serious eye conditions cause no symptoms until they are advanced and ' +
-          'would not appear in any test on this site.')),
+          'would not appear in any test on this site.'),
+        h('p', { style: { marginTop: 'var(--space-3)' } },
+          'This is not 100% accurate and nothing on a web page could be. ',
+          h('a', { href: '#/methodology' },
+            'How this works, how accurate it actually is, and what it was built from →'))),
 
       h('div.stack.stack--sm',
         h('p.eyebrow', test?.name ?? 'Result'),

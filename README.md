@@ -25,9 +25,15 @@ Colour vision · Visual acuity · Astigmatism · Central field · Perception gam
 > It runs on a screen whose brightness and colour profile it cannot measure, in a room it
 > cannot see. It can suggest that something is worth looking at. It cannot confirm or rule
 > out anything, and it does not produce a spectacle prescription.
+>
+> **This is not 100% accurate, and nothing on a web page could be.** Published comparisons of
+> screen-based colour plate tests against the printed booklet put sensitivity around 94–96%
+> and specificity around 82–95% — worth doing, nowhere near good enough to decide anything on.
+>
 > **A clear result here is not reassurance** — several serious eye conditions cause no
 > symptoms until they are advanced and would not appear in any test on this site.
 > See an eye care professional about any concern with your vision.
+> Full method, limitations and sources: **/#/methodology**
 
 ---
 
@@ -96,6 +102,12 @@ reverse-image-searchable and memorisable, and clinical plates are not public dom
 
 Fovea draws every plate on a canvas at run time, with the figure randomised per session.
 
+**Twelve plates, all legible.** An earlier build shipped 24 across four classes. Two of those
+classes were removed after rendering them and looking honestly at the result: *diagnostic*
+plates carried two overlapping figures and came out as unreadable mush, and *hidden* plates
+leaked — the figure stayed partly visible to normal vision, so they measured nothing. A
+smaller set where every plate is readable beats a longer one where a third are noise.
+
 **How the colours are chosen.** A dichromat is missing one cone class, which collapses their
 colour space to two dimensions. The set of colours that collapse to the same point forms a
 line — a *confusion line* — and two colours on it are indistinguishable to that person while
@@ -108,27 +120,40 @@ directions the deficiency cannot see. Deriving it this way makes the generator a
 validator provably consistent. Using published copunctal points instead left a residual
 separation of up to 0.06 OKLab — meaning "hidden" figures were still faintly visible.
 
-**On luminance.** A confusion line is *not* equiluminant, and cannot be made so: the line is
-one-dimensional and the equiluminant plane is two-dimensional, so they meet at a point.
-Real plates solve this with mottle, not with equal luminance — each palette scatters its
-dots' lightness by 2.5× its own systematic luminance difference, which is what
-*pseudoisochromatic* ("falsely of the same colour") actually means.
+**On luminance — a trap worth documenting.** Travelling along a confusion line changes
+brightness *as a normal trichromat measures it*. It is tempting to conclude the figure could
+be read from brightness alone, and to mask it with heavy per-dot lightness jitter. That
+reasoning is wrong and doing it destroys the test: the two pair members simulate to the
+**same** colour for the target deficiency, brightness included — measured difference after
+simulation is 0.0000 for protan. The luminance difference reaches only a normal trichromat,
+and for them it is part of the signal. An early version scaled jitter to it and quietly erased
+the figures, worst on protan plates, which have the largest difference. Jitter is now a small
+fixed mottle for visual character, asserted by test to stay well below the figure/ground gap.
 
 **Every plate is validated before display.** A plate whose figure is still separable to the
-deficiency it targets, or readable from brightness alone, is worse than no plate — it
-produces a confident wrong answer. The test suite asserts this over 8 randomised sessions.
+deficiency it targets is worse than no plate — it produces a confident wrong answer. The test
+suite asserts this, plus a minimum legibility floor and a guarantee that the mottle never
+bridges the figure/ground gap, over 8 randomised sessions.
 
-### Scoring follows the clinical structure
+### Scoring is per-axis, not an overall score
 
-Three things most web implementations get wrong, and Fovea doesn't:
+**A run is judged on its worst axis.** With plates balanced across protan, deutan and tritan,
+someone with a strong single-axis deficiency misses only the plates on their own axis — about
+a third of the set. Their overall ratio then lands mid-band and reads "inconclusive" even
+though the pattern is unmistakable: every plate on one axis missed, every plate on the others
+read. Averaging across axes dilutes exactly the signal that matters.
 
-1. **Hidden plates score inverted.** On a hidden plate, *reading* the figure is the atypical
-   response. Marking it "correct" misclassifies people with typical colour vision.
-2. **Type-identifying plates are excluded from the pass count.** They establish *which* type
-   once a difference is indicated; folding them in double-counts the same evidence.
-3. **There is a deliberate inconclusive band.** Between "typical" and "difference indicated"
-   sits a gap where the honest output is *this test cannot tell*. Collapsing it into a binary
-   verdict is where a screening tool starts making claims it cannot support.
+Missing ≥60% of one axis indicates a difference; ≤25% on every axis reads as typical.
+
+**There is a deliberate inconclusive band** between those. Collapsing it into a binary verdict
+is where a self-check starts making claims it cannot support.
+
+**The demonstration plate is a control, not a question.** Everyone reads it regardless of
+colour vision, so failing it voids the run rather than scoring it.
+
+Verified against simulated observers: a trichromat reads typical, one careless slip still
+reads typical, and strong protan / deutan / tritan each come out indicated and correctly typed.
+
 
 ### The screen resolution limit
 
@@ -189,6 +214,21 @@ monitor without glasses. Even if there were, one pixel subtends 48–95 arcsec a
 viewing distances — coarser than the 40 arcsec clinical cutoff — so the finest stimulus the
 screen could present is already worse than "normal". A depth-from-motion demo would work,
 but it measures a different mechanism entirely and calling it stereopsis would be a lie.
+
+### What this was built from
+
+Every figure quoted on the site traces to one of these, and where the research disagreed with
+itself the more cautious reading was taken. The full annotated list — with a note on *why*
+each one mattered — is on the in-app **/#/methodology** page.
+
+| Area | Key sources |
+|---|---|
+| CVD simulation | Brettel, Viénot & Mollon (1997); Viénot et al. (1999); Machado, Oliveira & Fernandes (2009) |
+| Colour vision testing | Kanehara plate instructions (38/24/14 editions); screen-vs-booklet validation (2024); weighted-scoring correction (2019) |
+| Optotypes & acuity | ISO 8596 (Landolt ring); Bailey & Lovie (1976) logMAR charts; ISO/IEC 7810 ID-1 |
+| Contrast & psychophysics | Allard & Faubert (2008) noisy-bit dithering; Campbell & Robson (1968); García-Pérez (1998) staircases |
+| Anatomy | Rohrschneider (2004) blind spot position; Ramachandran & Gregory (1991) filling-in |
+| Accessibility & safety | WCAG 2.2; MHRA guidance on stand-alone medical device software |
 
 ---
 

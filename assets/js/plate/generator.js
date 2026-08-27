@@ -11,22 +11,30 @@
  *   validity      we can hold luminance equal and place colours exactly on a
  *                 confusion line, which a scanned JPEG cannot promise
  *
- * PLATE CLASSES — each isolates a different thing, and a screening set needs
- * all of them because any single class alone is easy to fool:
+ * PLATE CLASSES
  *
- *   demonstration  everyone reads it. Confirms the user understands the task
- *                  and that their screen is showing the plate at all.
- *   vanishing      normal vision reads it, the target deficiency cannot. The
- *                  workhorse: figure and ground sit on one confusion line.
- *   hidden         only the deficiency reads it. Built from three colours so
- *                  that a dichromat's collapsed colour space merges two of them
- *                  into a coherent figure while a trichromat sees only texture.
- *                  Catches the user who is guessing or peeking at answers.
- *   diagnostic     carries two figures at once — one hidden along the protan
- *                  line, one along the deutan line. A protan reads one, a
- *                  deutan reads the other, normal vision reads both. This is
- *                  what separates protan from deutan rather than merely
- *                  detecting that something is off.
+ *   demonstration  everyone reads it, whatever their colour vision. Confirms
+ *                  the user understands the task and that the plate is
+ *                  rendering at all. Failing it voids the run.
+ *   vanishing      normal vision reads it, the target deficiency cannot.
+ *                  Figure and ground sit on one confusion line.
+ *
+ * Two further classes were built and REMOVED, which is worth recording so they
+ * are not reinvented:
+ *
+ *   diagnostic     carried two figures at once, one on the protan line and one
+ *                  on the deutan line, on the theory that each type would read
+ *                  a different digit. Rendered, it is unreadable mush — two
+ *                  overlapping glyphs quantised into the same dot field give
+ *                  neither figure enough coherent area. Typing is instead done
+ *                  by comparing miss rates across protan- and deutan-targeted
+ *                  vanishing plates, which works and is legible.
+ *   hidden         a figure only the deficiency sees. The three-colour
+ *                  construction leaked: the figure stayed partly visible to
+ *                  normal vision, so it measured nothing reliably.
+ *
+ * A smaller set of plates that are all legible beats a larger set where a third
+ * of them are noise.
  */
 
 import { packDisc, tiersFor, mulberry32, seedFrom } from './packing.js';
@@ -34,23 +42,26 @@ import { createMask, SHAPES, PATH_NAMES } from './glyph.js';
 import { confusionPair, simulateHex, separabilityUnder, luminanceDelta, PLATE_SEEDS } from '../color/cvd.js';
 import { rgbToHex, linearToRgb, hexToOklab, oklabToLinearRgb, clamp01 } from '../color/convert.js';
 
-export const PLATE_CLASSES = ['demonstration', 'vanishing', 'hidden', 'diagnostic'];
+export const PLATE_CLASSES = ['demonstration', 'vanishing'];
 
 /**
  * Per-dot jitter applied to lightness and chroma.
  *
- * This mottle is not decoration. A confusion line is not equiluminant (see
- * cvd.js), so figure and ground always carry some systematic brightness
- * difference — and without scatter, that difference alone would give the figure
- * away to anyone, deficiency or not. Randomising each dot by MORE than the
- * systematic difference destroys luminance as a cue and forces the observer to
- * integrate hue across the region, which is the thing we set out to measure.
+ * Real plates are visibly mottled and this reproduces that, but the amount is
+ * deliberately SMALL and fixed. An earlier version scaled it to the pair's
+ * luminance difference on the theory that brightness would otherwise give the
+ * figure away. That reasoning was wrong: the target deficiency sees no
+ * brightness difference across the pair at all (both members simulate to the
+ * same colour), so the only observer that difference reaches is a normal
+ * trichromat — for whom it is part of the signal, not a leak. Scaling jitter to
+ * it actively erased the figure, worst on protan plates, which have the largest
+ * difference and were consequently the hardest to read.
  *
- * Chroma jitter is capped well below the figure/ground separation so it blurs
- * the boundary without ever bridging it.
+ * Both values stay well below the figure/ground separation so the mottle
+ * softens the boundary without ever bridging it.
  */
-const CHROMA_JITTER = 0.012;
-const MIN_LIGHTNESS_JITTER = 0.030;
+const CHROMA_JITTER = 0.010;
+const LIGHTNESS_JITTER = 0.022;
 
 function jitterHex(hex, rng, amount) {
   const [L, a, b] = hexToOklab(hex);
@@ -134,11 +145,15 @@ function pickFrom(colours, rng) {
 /* ------------------------------------------------------------- geometry */
 
 function buildMasks(spec, radius) {
+  const twoDigit = spec.figureKind === 'digits' && String(spec.figure).length > 1;
   const primary = createMask({
     radius,
     kind: spec.figureKind,
+    // Figure HEIGHT as a fraction of the plate diameter. A two-digit string
+    // gets a slightly shorter figure so the pair still fits the disc, but
+    // nothing like the halving that width-fitting used to cause.
+    scale: spec.figureKind !== 'digits' ? 0.52 : twoDigit ? 0.46 : 0.54,
     value: spec.figure,
-    scale: spec.figureKind === 'digits' ? 0.60 : 0.52,
   });
 
   // Diagnostic plates carry a second figure. It is offset and scaled slightly
@@ -175,8 +190,6 @@ function buildPalette(spec, rng) {
   switch (spec.plateClass) {
     case 'demonstration':  return demonstrationPalette(rng);
     case 'vanishing':      return vanishingPalette(seed, type);
-    case 'hidden':         return hiddenPalette(seed, type);
-    case 'diagnostic':     return diagnosticPalette(seed, rng);
     default:               return vanishingPalette(seed, type);
   }
 }
@@ -191,7 +204,7 @@ function demonstrationPalette(rng) {
   const cool = ['#d9cfa8', '#d2c69c', '#e0d6b2'];
   return {
     field: '#efe9d8',
-    jitter: { lightness: MIN_LIGHTNESS_JITTER, chroma: CHROMA_JITTER },
+    jitter: jitterFor(),
     regions: {
       primary: warm,
       secondary: warm,
@@ -206,7 +219,7 @@ function vanishingPalette(seed, type) {
   const pair = confusionPair(seed, type);
   return {
     field: '#e8e2d4',
-    jitter: jitterFor(pair),
+    jitter: jitterFor(),
     regions: {
       primary: [pair.a],
       secondary: [pair.a],
@@ -217,65 +230,9 @@ function vanishingPalette(seed, type) {
   };
 }
 
-/** Scatter must exceed the pair's own systematic luminance difference. */
-function jitterFor(pair) {
-  return {
-    lightness: Math.max(MIN_LIGHTNESS_JITTER, pair.requiredJitter),
-    chroma: CHROMA_JITTER,
-  };
-}
-
-/**
- * Only the deficiency reads this one.
- *
- * Three colours. `merge` and `figure` sit on the target's confusion line, so a
- * dichromat sees them as one colour; `other` does not. The figure region is
- * filled with {figure, merge} and the ground with {other, merge}. To normal
- * vision both regions are two-tone mottle and no shape emerges. To the
- * deficiency the figure region collapses to a single flat colour while the
- * ground stays mottled, and the shape appears out of that texture difference.
- */
-function hiddenPalette(seed, type) {
-  const pair = confusionPair(seed, type);
-  const other = shift(rotateHue(seed, 0.28), 0.05);
-  return {
-    field: '#e8e2d4',
-    jitter: jitterFor(pair),
-    regions: {
-      primary: [pair.a, pair.b],
-      secondary: [pair.a, pair.b],
-      both: [pair.a, pair.b],
-      ground: [other, pair.b],
-    },
-    meta: { pair, other, type },
-  };
-}
-
-/**
- * Two figures, two confusion lines.
- *
- * The primary figure is hidden along the PROTAN line and the secondary along
- * the DEUTAN line. A protan therefore reads only the secondary, a deutan only
- * the primary, and normal vision reads both. Comparing which figure a user
- * reports is what lets the report say "protan-type" rather than just
- * "something is off".
- */
-function diagnosticPalette(seed, rng) {
-  const protanPair = confusionPair(seed, 'protan');
-  const deutanPair = confusionPair(seed, 'deutan');
-  return {
-    field: '#e8e2d4',
-    jitter: jitterFor(protanPair.requiredJitter > deutanPair.requiredJitter ? protanPair : deutanPair),
-    regions: {
-      // Region read by deutans (invisible to protans): protan-confusable vs ground
-      primary: [protanPair.a],
-      // Region read by protans (invisible to deutans)
-      secondary: [deutanPair.a],
-      both: [protanPair.a, deutanPair.a],
-      ground: [protanPair.b, deutanPair.b],
-    },
-    meta: { protanPair, deutanPair },
-  };
+/** Fixed mottle. See the note on JITTER above for why this is not scaled. */
+function jitterFor() {
+  return { lightness: LIGHTNESS_JITTER, chroma: CHROMA_JITTER };
 }
 
 /* ---------------------------------------------------------------- colour */
@@ -294,7 +251,17 @@ function rotateHue(hex, radians) {
 
 /* =============================================================== the set */
 
-const DIGIT_POOL = ['2', '3', '5', '6', '7', '8', '9', '12', '15', '16', '26', '29', '42', '45', '57', '73', '74', '96'];
+/**
+ * Weighted toward single digits, which quantise into dots far more cleanly.
+ * The two-digit entries kept are ones whose two glyphs have clearly different
+ * silhouettes — '17' and '71' are avoided because a partly-read plate makes
+ * them easy to confuse with each other.
+ */
+const DIGIT_POOL = [
+  '2', '3', '5', '6', '7', '8', '9',
+  '2', '5', '6', '7',            // repeated: single digits get roughly 2x weight
+  '12', '26', '29', '45', '74',
+];
 
 /**
  * Build a randomised plate set for one session.
@@ -309,45 +276,39 @@ const DIGIT_POOL = ['2', '3', '5', '6', '7', '8', '9', '12', '15', '16', '26', '
  * @param {'digits'|'shape'|'path'} [opts.figureKind]  'shape'/'path' = kids mode
  * @param {string|number} [opts.sessionSeed]
  */
-export function buildPlateSet({ count = 24, figureKind = 'digits', sessionSeed = Date.now() } = {}) {
+export function buildPlateSet({ count = 12, figureKind = 'digits', sessionSeed = Date.now() } = {}) {
   const rng = mulberry32(typeof sessionSeed === 'string' ? seedFrom(sessionSeed) : sessionSeed >>> 0);
   const pool = figureKind === 'digits' ? DIGIT_POOL : figureKind === 'shape' ? SHAPES : PATH_NAMES;
 
   /**
-   * Protan and deutan get identical weight. Deutan deficiencies are commoner in
-   * the population, but weighting the set toward them means a protan misses
-   * fewer plates and can land in the inconclusive band while a deutan of the
-   * same strength is clearly flagged. The set has to be able to fail both types
-   * equally, so hidden plates alternate axis too rather than all targeting
-   * deutan.
+   * Twelve plates: one demonstration plus eleven vanishing, weighted equally
+   * between protan and deutan with a smaller tritan block.
+   *
+   * Protan and deutan MUST carry equal weight. Deutan deficiency is commoner,
+   * but weighting toward it means a protan misses fewer plates and can land in
+   * the inconclusive band while an equally strong deutan is clearly flagged.
+   * The set has to be able to fail both types the same way.
+   *
+   * Tritan gets fewer because congenital tritan defects are genuinely rare; the
+   * plates are kept so an acquired blue-yellow change has somewhere to show up.
    */
   const plan = [
     { plateClass: 'demonstration', targets: null,     n: 1 },
-    { plateClass: 'vanishing',     targets: 'deutan', n: Math.round((count - 1) * 0.25) },
-    { plateClass: 'vanishing',     targets: 'protan', n: Math.round((count - 1) * 0.25) },
-    { plateClass: 'vanishing',     targets: 'tritan', n: Math.round((count - 1) * 0.12) },
-    { plateClass: 'hidden',        targets: 'deutan', n: Math.round((count - 1) * 0.06) },
-    { plateClass: 'hidden',        targets: 'protan', n: Math.round((count - 1) * 0.06) },
-    { plateClass: 'diagnostic',    targets: null,     n: Math.round((count - 1) * 0.26) },
+    { plateClass: 'vanishing',     targets: 'deutan', n: Math.max(1, Math.round((count - 1) * 0.36)) },
+    { plateClass: 'vanishing',     targets: 'protan', n: Math.max(1, Math.round((count - 1) * 0.36)) },
+    { plateClass: 'vanishing',     targets: 'tritan', n: Math.max(1, Math.round((count - 1) * 0.28)) },
   ];
 
   const plates = [];
   for (const step of plan) {
     for (let i = 0; i < step.n; i++) {
       const figure = pool[(rng() * pool.length) | 0];
-      let altFigure = null;
-      if (step.plateClass === 'diagnostic') {
-        // The two figures must differ, or the plate cannot discriminate.
-        do {
-          altFigure = pool[(rng() * pool.length) | 0];
-        } while (altFigure === figure);
-      }
       plates.push({
         id: `p${plates.length + 1}`,
         plateClass: step.plateClass,
         figureKind,
         figure,
-        altFigure,
+        altFigure: null,
         targets: step.targets,
         seed: (rng() * 0xffffffff) >>> 0,
       });
@@ -375,7 +336,7 @@ export function buildPlateSet({ count = 24, figureKind = 'digits', sessionSeed =
  *
  * @returns {{ ok: boolean, problems: string[], metrics: object }}
  */
-export function validatePlate(spec, { minNormalDelta = 0.055, maxCvdDelta = 0.012, minJitterRatio = 2.0 } = {}) {
+export function validatePlate(spec, { minNormalDelta = 0.12, maxCvdDelta = 0.012 } = {}) {
   const rng = mulberry32(spec.seed);
   const palette = buildPalette(spec, rng);
   const problems = [];
@@ -383,18 +344,19 @@ export function validatePlate(spec, { minNormalDelta = 0.055, maxCvdDelta = 0.01
   if (spec.plateClass === 'vanishing') {
     const { pair, type } = palette.meta;
     const cvd = separabilityUnder(pair.a, pair.b, type, 1);
-    const jitterRatio = pair.luminanceDelta > 0
-      ? palette.jitter.lightness / pair.luminanceDelta
-      : Infinity;
+
+    // The mottle must never be large enough to bridge the figure/ground gap,
+    // or dots from the two regions would overlap in colour and blur the edge.
+    const jitterHeadroom = pair.normalDelta / palette.jitter.lightness;
 
     if (pair.normalDelta < minNormalDelta) {
-      problems.push(`normal-vision separation ${pair.normalDelta.toFixed(3)} too small — plate unreadable by everyone`);
+      problems.push(`normal-vision separation ${pair.normalDelta.toFixed(3)} too small — figure hard to read for everyone`);
     }
     if (cvd > maxCvdDelta) {
       problems.push(`still separable under ${type} (${cvd.toFixed(3)}) — plate does not hide the figure`);
     }
-    if (jitterRatio < minJitterRatio) {
-      problems.push(`dot jitter only ${jitterRatio.toFixed(1)}x the luminance difference — figure readable by brightness`);
+    if (jitterHeadroom < 3) {
+      problems.push(`dot jitter is ${(1 / jitterHeadroom).toFixed(2)}x the figure/ground separation — mottle would bridge the edge`);
     }
     return {
       ok: problems.length === 0,
@@ -403,7 +365,7 @@ export function validatePlate(spec, { minNormalDelta = 0.055, maxCvdDelta = 0.01
         normalDelta: pair.normalDelta,
         cvdDelta: cvd,
         luminanceDelta: pair.luminanceDelta,
-        jitterRatio,
+        jitterHeadroom,
       },
     };
   }

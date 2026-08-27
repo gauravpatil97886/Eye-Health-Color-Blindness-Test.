@@ -60,24 +60,26 @@ test('confusion directions are unit vectors and mutually distinct', () => {
 test('every vanishing plate in a generated set validates', () => {
   let checked = 0;
   for (const sessionSeed of SESSIONS) {
-    for (const plate of buildPlateSet({ count: 24, sessionSeed })) {
+    for (const plate of buildPlateSet({ sessionSeed })) {
       if (plate.plateClass !== 'vanishing') continue;
       const v = validatePlate(plate);
       assert.ok(v.ok, `${sessionSeed} ${plate.targets}: ${v.problems.join('; ')}`);
       checked++;
     }
   }
-  assert.ok(checked > 50, `expected a meaningful sample, only checked ${checked}`);
+  assert.ok(checked >= 80, `expected a meaningful sample, only checked ${checked}`);
 });
 
-test('plate sets contain every class a screening set needs', () => {
+test('a plate set opens with the control and covers all three axes', () => {
   for (const sessionSeed of SESSIONS) {
-    const set = buildPlateSet({ count: 24, sessionSeed });
-    const classes = new Set(set.map((p) => p.plateClass));
-    for (const required of ['demonstration', 'vanishing', 'hidden', 'diagnostic']) {
-      assert.ok(classes.has(required), `${sessionSeed} is missing ${required} plates`);
-    }
-    assert.equal(set[0].plateClass, 'demonstration', 'demonstration plate must come first');
+    const set = buildPlateSet({ sessionSeed });
+    assert.equal(set.length, 12, 'default set should be 12 plates');
+    assert.equal(set[0].plateClass, 'demonstration',
+      'the control plate must come first — it validates the run');
+    assert.equal(
+      set.filter((p) => p.plateClass === 'demonstration').length, 1,
+      'exactly one control plate');
+
     const targets = new Set(set.filter((p) => p.targets).map((p) => p.targets));
     for (const t of CVD_TYPES) {
       assert.ok(targets.has(t), `${sessionSeed} never targets ${t}`);
@@ -85,20 +87,38 @@ test('plate sets contain every class a screening set needs', () => {
   }
 });
 
-test('diagnostic plates always carry two different figures', () => {
+test('protan and deutan carry equal weight', () => {
+  // Weighting toward deutan (the commoner type) would let a protan miss fewer
+  // plates and slip into the inconclusive band while an equally strong deutan
+  // is flagged. The set has to be able to fail both the same way.
   for (const sessionSeed of SESSIONS) {
-    for (const p of buildPlateSet({ count: 24, sessionSeed })) {
-      if (p.plateClass !== 'diagnostic') continue;
-      assert.ok(p.altFigure, 'diagnostic plate has no alternate figure');
-      assert.notEqual(p.figure, p.altFigure, 'diagnostic figures are identical — cannot discriminate');
+    const set = buildPlateSet({ sessionSeed });
+    const n = (t) => set.filter((p) => p.targets === t).length;
+    assert.equal(n('protan'), n('deutan'),
+      `${sessionSeed}: protan ${n('protan')} vs deutan ${n('deutan')} plates`);
+  }
+});
+
+test('the mottle never bridges the figure/ground gap', () => {
+  // Jitter exists for visual character. If it ever approached the separation
+  // between figure and ground colours, dots from the two regions would overlap
+  // and the edge would blur away.
+  for (const sessionSeed of SESSIONS) {
+    for (const plate of buildPlateSet({ sessionSeed })) {
+      if (plate.plateClass !== 'vanishing') continue;
+      const v = validatePlate(plate);
+      assert.ok(
+        v.metrics.jitterHeadroom >= 3,
+        `${sessionSeed} ${plate.targets}: jitter headroom only ${v.metrics.jitterHeadroom?.toFixed(1)}x`
+      );
     }
   }
 });
 
 test('plate sets are reproducible from a seed and different across seeds', () => {
-  const a = buildPlateSet({ count: 24, sessionSeed: 'same' });
-  const b = buildPlateSet({ count: 24, sessionSeed: 'same' });
-  const c = buildPlateSet({ count: 24, sessionSeed: 'different' });
+  const a = buildPlateSet({ sessionSeed: 'same' });
+  const b = buildPlateSet({ sessionSeed: 'same' });
+  const c = buildPlateSet({ sessionSeed: 'different' });
   assert.deepEqual(a, b, 'same seed must reproduce the same set');
   assert.notDeepEqual(
     a.map((p) => p.figure + p.seed),
