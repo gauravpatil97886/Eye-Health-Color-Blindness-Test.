@@ -313,12 +313,21 @@ export function buildPlateSet({ count = 24, figureKind = 'digits', sessionSeed =
   const rng = mulberry32(typeof sessionSeed === 'string' ? seedFrom(sessionSeed) : sessionSeed >>> 0);
   const pool = figureKind === 'digits' ? DIGIT_POOL : figureKind === 'shape' ? SHAPES : PATH_NAMES;
 
+  /**
+   * Protan and deutan get identical weight. Deutan deficiencies are commoner in
+   * the population, but weighting the set toward them means a protan misses
+   * fewer plates and can land in the inconclusive band while a deutan of the
+   * same strength is clearly flagged. The set has to be able to fail both types
+   * equally, so hidden plates alternate axis too rather than all targeting
+   * deutan.
+   */
   const plan = [
     { plateClass: 'demonstration', targets: null,     n: 1 },
-    { plateClass: 'vanishing',     targets: 'deutan', n: Math.round((count - 1) * 0.28) },
-    { plateClass: 'vanishing',     targets: 'protan', n: Math.round((count - 1) * 0.24) },
+    { plateClass: 'vanishing',     targets: 'deutan', n: Math.round((count - 1) * 0.25) },
+    { plateClass: 'vanishing',     targets: 'protan', n: Math.round((count - 1) * 0.25) },
     { plateClass: 'vanishing',     targets: 'tritan', n: Math.round((count - 1) * 0.12) },
-    { plateClass: 'hidden',        targets: 'deutan', n: Math.round((count - 1) * 0.10) },
+    { plateClass: 'hidden',        targets: 'deutan', n: Math.round((count - 1) * 0.06) },
+    { plateClass: 'hidden',        targets: 'protan', n: Math.round((count - 1) * 0.06) },
     { plateClass: 'diagnostic',    targets: null,     n: Math.round((count - 1) * 0.26) },
   ];
 

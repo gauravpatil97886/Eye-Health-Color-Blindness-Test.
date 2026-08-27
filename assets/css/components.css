@@ -389,15 +389,48 @@
   border-bottom: var(--border-width) solid var(--border-1);
 }
 
-/* During a test the header collapses to a thin abort/progress bar and loses
-   every tinted element. */
+/* ---------------------------------------------------------------------------
+   TEST MODE CHROME
+   Everything tinted is suppressed the moment a measurement starts. This is not
+   a stylistic preference: a saturated button beside a colour plate shifts the
+   plate's perceived hue through simultaneous contrast, and navigation next to a
+   stimulus invites the eye away from it mid-trial. The chrome collapses to a
+   single exit affordance in the plate's own neutral grey.
+   --------------------------------------------------------------------------- */
 :root[data-test-mode] .site-header {
   background: var(--test-panel);
   border-bottom-color: var(--test-border);
   backdrop-filter: none;
 }
-:root[data-test-mode] .site-footer { display: none; }
+:root[data-test-mode] .site-footer,
+:root[data-test-mode] .site-nav--main,
+:root[data-test-mode] #theme-toggle,
+:root[data-test-mode] .site-nav__menu { display: none; }
+
 :root[data-test-mode] body { background: var(--test-bg); color: var(--test-fg); }
+
+/* No brand colour may reach a test surface — buttons included. */
+:root[data-test-mode] .btn--primary {
+  --btn-bg: var(--test-fg);
+  --btn-fg: var(--test-bg);
+  --btn-border: var(--test-fg);
+  box-shadow: none;
+}
+:root[data-test-mode] .btn--primary:hover:not(:disabled) {
+  --btn-bg: var(--test-fg-2);
+  --btn-border: var(--test-fg-2);
+}
+:root[data-test-mode] .btn--secondary {
+  --btn-bg: var(--test-panel);
+  --btn-fg: var(--test-fg);
+  --btn-border: var(--test-border);
+}
+:root[data-test-mode] .btn--secondary:hover:not(:disabled) {
+  --btn-bg: var(--test-bg);
+  --btn-border: var(--test-fg);
+}
+:root[data-test-mode] .btn--ghost { --btn-fg: var(--test-fg); }
+:root[data-test-mode] .btn--ghost:hover:not(:disabled) { --btn-bg: var(--test-panel); }
 
 .site-header__inner { display: flex; align-items: center; gap: var(--space-5); width: 100%; }
 

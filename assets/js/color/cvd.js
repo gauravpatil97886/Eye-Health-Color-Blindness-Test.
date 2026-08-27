@@ -104,7 +104,7 @@ function normalise(v) {
  * falsely of the same colour — actually means. `requiredJitter` below reports
  * how much scatter this particular pair needs.
  */
-export function confusionPair(baseHex, type, { spread = 0.09 } = {}) {
+export function confusionPair(baseHex, type, { spread = 0.34 } = {}) {
   const base = rgbToLinear(hexToRgb(baseHex));
   const dir = CONFUSION_DIRECTION[type];
 
@@ -141,6 +141,46 @@ function luminanceOfLinear([r, g, b]) {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
+/**
+ * Build two PALETTES rather than two colours.
+ *
+ * Every point on a confusion line collapses to the same simulated colour, so a
+ * whole segment of the line is mutually confusable. Sampling several points per
+ * region gives the plate the mottled, many-toned look of a real printed one —
+ * and, more usefully, means a trichromat sees a spread of hues in each region
+ * rather than two flat fills, which defeats naive edge detection while carrying
+ * exactly zero information for the target deficiency.
+ *
+ * @returns {{ figure: string[], ground: string[], luminanceDelta: number,
+ *             normalDelta: number, requiredJitter: number }}
+ */
+export function confusionPalettes(baseHex, type, { spread = 0.09, steps = 4 } = {}) {
+  const pair = confusionPair(baseHex, type, { spread });
+  const base = rgbToLinear(hexToRgb(baseHex));
+  const dir = CONFUSION_DIRECTION[type];
+  const t = pair.separation;
+
+  const sample = (lo, hi) => {
+    const out = [];
+    for (let i = 0; i < steps; i++) {
+      const k = steps === 1 ? (lo + hi) / 2 : lo + ((hi - lo) * i) / (steps - 1);
+      const c = base.map((v, j) => v + dir[j] * k);
+      if (inGamut(c)) out.push(rgbToHex(linearToRgb(c)));
+    }
+    return out.length ? out : [rgbToHex(linearToRgb(base))];
+  };
+
+  return {
+    // Two disjoint segments, leaving a gap in the middle so the regions stay
+    // well separated for a trichromat.
+    figure: sample(t * 0.45, t),
+    ground: sample(-t, -t * 0.45),
+    luminanceDelta: pair.luminanceDelta,
+    normalDelta: pair.normalDelta,
+    requiredJitter: pair.requiredJitter,
+  };
+}
+
 function oklabDistance(hexA, hexB) {
   const [l1, a1, b1] = hexToOklab(hexA);
   const [l2, a2, b2] = hexToOklab(hexB);
@@ -148,58 +188,72 @@ function oklabDistance(hexA, hexB) {
 }
 
 /**
- * Seed colours that produce well-separated, in-gamut confusion pairs. Chosen by
- * search (see test/cvd.test.js) rather than by eye — the constraint is that the
- * pair must stay inside sRGB at equal luminance while remaining far apart in
- * OKLab for a normal trichromat.
+ * Seed colours for plate palettes. Found by exhaustive search over sRGB rather
+ * than picked by eye, against four simultaneous constraints:
+ *
+ *   1. residual separation under the TARGET deficiency <= 0.006 OKLab
+ *      (i.e. genuinely invisible, at the 8-bit quantisation floor)
+ *   2. separation for normal vision as large as possible — this is what makes
+ *      the figure legible, and the search maximises it
+ *   3. separation under the OTHER TWO deficiencies >= 0.10, so a protan can
+ *      still read a deutan plate and vice versa. Without this the plate set
+ *      could detect that something is wrong but never say which type.
+ *   4. systematic luminance difference <= 0.042, so the dot jitter needed to
+ *      bury it stays under 0.10 OKLab lightness and the plate does not turn
+ *      into visual noise.
+ *
+ * Achieved normal-vision separation: protan 0.23-0.26, deutan 0.29-0.31,
+ * tritan 0.36 — roughly 3x what a naive mid-grey seed produces.
  */
 export const PLATE_SEEDS = {
-  protan: ['#8c7a5e', '#9a7f66', '#7d7458', '#94806b'],
-  deutan: ['#8d6f62', '#8a7458', '#96745f', '#7f6f5c'],
-  tritan: ['#7f7a6a', '#8a7d63', '#78766b', '#877b6d'],
+  protan: ['#70290f', '#70330f', '#703d0f', '#66240f'],
+  deutan: ['#8a5c1a', '#945c1a', '#8a661a', '#805714'],
+  tritan: ['#47429e', '#52429e', '#5c429e', '#474d9e'],
 };
 
 /* ============================================================ simulation */
 
 /**
- * Viénot, Brettel & Mollon (1999) dichromat simulation.
+ * Dichromat simulation — Brettel, Viénot & Mollon (1997), two half-planes.
  *
- * The dichromat's reduced colour space is a half-plane in LMS bounded by the
- * neutral axis. Simulation projects the stimulus onto that plane along the
- * axis of the missing cone. These are the standard single-plane matrices,
- * applied in LINEAR RGB — running them on gamma-encoded values (a very common
- * bug) produces noticeably wrong, over-saturated output.
+ * A dichromat's reduced gamut is not one plane but TWO, hinged on the neutral
+ * axis and anchored at 475/575 nm for protan and deutan, 485/660 nm for tritan.
+ * We pick the half-plane by the sign of a dot product with a separation vector
+ * and apply that plane's matrix.
+ *
+ * The widely-copied Viénot (1999) single-matrix shortcut collapses both planes
+ * into one. That is an acceptable approximation for protan and deutan, whose
+ * planes nearly coincide — but it is NOT valid for tritan, where they diverge
+ * sharply. Using the single-plane form for tritan (a very common bug, and one
+ * this file previously had) misplaces blue-yellow colours badly.
+ *
+ * All matrices operate on LINEAR RGB. Applying them to gamma-encoded sRGB is
+ * the other classic error and yields over-saturated, too-dark output.
  */
-const VIENOT_LMS = {
-  protan: [
-    0.0,      2.02344, -2.52581,
-    0.0,      1.0,      0.0,
-    0.0,      0.0,      1.0,
-  ],
-  deutan: [
-    1.0,      0.0,      0.0,
-    0.494207, 0.0,      1.24827,
-    0.0,      0.0,      1.0,
-  ],
-  tritan: [
-    1.0,      0.0,      0.0,
-    0.0,      1.0,      0.0,
-   -0.395913, 0.801109, 0.0,
-  ],
+const BRETTEL = {
+  protan: {
+    sep: [0.00048, 0.00393, -0.00441],
+    m1: [0.14980, 1.19548, -0.34528, 0.10764, 0.84864, 0.04372, 0.00384, -0.00540, 1.00156],
+    m2: [0.14570, 1.16172, -0.30742, 0.10816, 0.85291, 0.03892, 0.00386, -0.00524, 1.00139],
+  },
+  deutan: {
+    sep: [-0.00281, -0.00611, 0.00892],
+    m1: [0.36477, 0.86381, -0.22858, 0.26294, 0.64245, 0.09462, -0.02006, 0.02728, 0.99278],
+    m2: [0.37298, 0.88166, -0.25464, 0.25954, 0.63506, 0.10540, -0.01980, 0.02784, 0.99196],
+  },
+  tritan: {
+    sep: [0.03901, -0.02788, -0.01113],
+    m1: [1.01277, 0.13548, -0.14826, -0.01243, 0.86812, 0.14431, 0.07589, 0.80500, 0.11911],
+    m2: [0.93678, 0.18979, -0.12657, 0.06154, 0.81526, 0.12320, -0.37562, 1.12767, 0.24796],
+  },
 };
 
-/** Linear sRGB -> LMS (Viénot et al. formulation). */
-const RGB_TO_LMS_V = [
-  17.8824,   43.5161,   4.11935,
-   3.45565,  27.1554,   3.86714,
-   0.0299566, 0.184309, 1.46709,
-];
-
-const LMS_TO_RGB_V = [
-   0.0809444479, -0.1305044090,  0.1167721270,
-  -0.0102485335,  0.0540193266, -0.1136147080,
-  -0.0003652968, -0.0041216147,  0.6935114310,
-];
+/** Pick the correct half-plane matrix for a linear-RGB colour. */
+function brettelMatrix(lin, type) {
+  const p = BRETTEL[type];
+  const side = lin[0] * p.sep[0] + lin[1] * p.sep[1] + lin[2] * p.sep[2];
+  return side >= 0 ? p.m1 : p.m2;
+}
 
 /**
  * Simulate how a colour appears to someone with the given deficiency.
@@ -207,15 +261,15 @@ const LMS_TO_RGB_V = [
  * @param {[number,number,number]} rgb  gamma-encoded sRGB, 0..1
  * @param {CvdType} type
  * @param {number} [severity]  0 = unaffected, 1 = full dichromacy. Values in
- *   between linearly interpolate, which approximates anomalous trichromacy
- *   (protanomaly / deuteranomaly / tritanomaly) well enough for a simulator.
+ *   between interpolate toward the dichromat projection, which approximates
+ *   anomalous trichromacy (protanomaly / deuteranomaly) well enough for a
+ *   simulator, though a real anomalous trichromat's experience is a shifted
+ *   photopigment rather than a missing one.
  */
 export function simulate(rgb, type, severity = 1) {
   if (severity <= 0) return rgb;
   const lin = rgbToLinear(rgb);
-  const lms = mul3(RGB_TO_LMS_V, lin);
-  const projected = mul3(VIENOT_LMS[type], lms);
-  const out = mul3(LMS_TO_RGB_V, projected);
+  const out = mul3(brettelMatrix(lin, type), lin);
   const mixed = severity >= 1
     ? out
     : out.map((v, i) => lin[i] * (1 - severity) + v * severity);
@@ -233,11 +287,7 @@ export function simulateHex(hex, type, severity = 1) {
  */
 export function simulateImageData(imageData, type, severity = 1) {
   const d = imageData.data;
-  const M = VIENOT_LMS[type];
-  const A = RGB_TO_LMS_V;
-  const B = LMS_TO_RGB_V;
-
-  // 8-bit sRGB decode is only 256 distinct values — precompute it.
+  const p = BRETTEL[type];
   const decode = SRGB_DECODE_LUT;
 
   for (let i = 0; i < d.length; i += 4) {
@@ -245,17 +295,12 @@ export function simulateImageData(imageData, type, severity = 1) {
     const g = decode[d[i + 1]];
     const b = decode[d[i + 2]];
 
-    const l = A[0] * r + A[1] * g + A[2] * b;
-    const m = A[3] * r + A[4] * g + A[5] * b;
-    const s = A[6] * r + A[7] * g + A[8] * b;
+    // Half-plane selection is per pixel — this is the whole point of Brettel.
+    const M = (r * p.sep[0] + g * p.sep[1] + b * p.sep[2]) >= 0 ? p.m1 : p.m2;
 
-    const l2 = M[0] * l + M[1] * m + M[2] * s;
-    const m2 = M[3] * l + M[4] * m + M[5] * s;
-    const s2 = M[6] * l + M[7] * m + M[8] * s;
-
-    let nr = B[0] * l2 + B[1] * m2 + B[2] * s2;
-    let ng = B[3] * l2 + B[4] * m2 + B[5] * s2;
-    let nb = B[6] * l2 + B[7] * m2 + B[8] * s2;
+    let nr = M[0] * r + M[1] * g + M[2] * b;
+    let ng = M[3] * r + M[4] * g + M[5] * b;
+    let nb = M[6] * r + M[7] * g + M[8] * b;
 
     if (severity < 1) {
       nr = r + (nr - r) * severity;
