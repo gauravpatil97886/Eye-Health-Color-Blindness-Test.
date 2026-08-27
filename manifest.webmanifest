@@ -1,0 +1,14 @@
+{
+  "name": "Fovea — Vision Checks",
+  "short_name": "Fovea",
+  "description": "Open-source vision checks that run entirely in your browser.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    { "src": "assets/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
