@@ -1,0 +1,580 @@
+/* ==========================================================================
+   Fovea — screen-level styles
+   ========================================================================== */
+
+/* ----------------------------------------------------------------- brand */
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-1);
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-xl);
+  letter-spacing: var(--tracking-tight);
+  flex: none;
+}
+.brand__mark { color: var(--brand-600); flex: none; }
+:root[data-theme="dark"] .brand__mark { color: var(--brand-400); }
+:root[data-test-mode] .brand__mark { color: var(--test-fg); }
+:root[data-test-mode] .brand { color: var(--test-fg); }
+
+/* ------------------------------------------------------------ mobile nav */
+
+.site-nav__menu { display: none; }
+@media (max-width: 52rem) { .site-nav__menu { display: inline-flex; } }
+
+.mobile-nav {
+  position: sticky;
+  top: var(--header-height);
+  z-index: var(--z-sticky);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2);
+  background: var(--surface-0);
+  border-bottom: var(--border-width) solid var(--border-1);
+  box-shadow: var(--shadow-md);
+}
+.mobile-nav a {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  color: var(--text-1);
+  text-decoration: none;
+  font-weight: var(--weight-medium);
+}
+.mobile-nav a:hover { background: var(--surface-1); }
+
+/* [hidden] is only display:none at the UA-stylesheet level, so an explicit
+   display on the same element silently wins. This is the fix. */
+.mobile-nav[hidden] { display: none; }
+
+/* --------------------------------------------------------------- footer */
+
+.site-footer__grid {
+  display: grid;
+  gap: var(--space-8);
+  grid-template-columns: 1fr;
+  margin-bottom: var(--space-8);
+}
+@media (min-width: 40rem) {
+  .site-footer__grid { grid-template-columns: 2fr 1fr; }
+}
+.site-footer__grid nav { display: flex; flex-direction: column; gap: var(--space-2); }
+.site-footer__grid a { color: var(--text-2); text-decoration: none; font-size: var(--text-sm); }
+.site-footer__grid a:hover { color: var(--text-1); text-decoration: underline; }
+
+.site-footer__legal {
+  padding: var(--space-4) 0;
+  border-top: var(--border-width) solid var(--border-1);
+  font-size: var(--text-sm);
+  color: var(--text-2);
+  max-width: var(--measure);
+}
+
+/* =============================================================== the hero
+   "The Mosaic" — a canvas render of the foveal cone mosaic with a figure
+   hidden in it by hue alone, and a slider that dissolves the figure by
+   applying a dichromat transform. It is the product demonstrating itself:
+   drag the slider and you experience the thing the test measures.
+   ========================================================================== */
+
+.hero {
+  position: relative;
+  padding-block: var(--space-16) var(--space-12);
+  overflow: hidden;
+}
+
+.hero__grid {
+  display: grid;
+  gap: var(--space-10);
+  align-items: center;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 60rem) {
+  .hero__grid { grid-template-columns: 1.05fr 0.95fr; gap: var(--space-16); }
+}
+
+.hero__title {
+  font-size: clamp(var(--text-3xl), 6vw, var(--text-5xl));
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+}
+.hero__title em {
+  font-style: normal;
+  color: var(--text-brand);
+}
+
+.hero__lede { font-size: var(--text-lg); color: var(--text-2); max-width: 46ch; }
+
+.hero__cta { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-2); }
+
+.hero__trust {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-3);
+}
+
+.mosaic {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.mosaic__frame {
+  position: relative;
+  aspect-ratio: 1;
+  width: 100%;
+  max-width: 30rem;
+  margin-inline: auto;
+  border-radius: var(--radius-2xl);
+  overflow: hidden;
+  background: #949494;   /* the achromatic equivalent of the mosaic's luminance */
+  box-shadow: var(--shadow-lg);
+}
+.mosaic__canvas { width: 100%; height: 100%; display: block; }
+
+.mosaic__control {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 30rem;
+  margin-inline: auto;
+  width: 100%;
+}
+
+.mosaic__label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-2);
+}
+.mosaic__value {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 44px;             /* full-height hit area, 6px visible track */
+  background: transparent;
+  cursor: pointer;
+}
+.slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, var(--brand-500), var(--surface-3));
+}
+.slider::-moz-range-track {
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, var(--brand-500), var(--surface-3));
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px; height: 24px;
+  margin-top: -9px;
+  border-radius: 50%;
+  background: var(--surface-0);
+  border: 2px solid var(--brand-600);
+  box-shadow: var(--shadow-sm);
+}
+.slider::-moz-range-thumb {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--surface-0);
+  border: 2px solid var(--brand-600);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---------------------------------------------------------- stat strip */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--space-6);
+  padding: var(--space-8) 0;
+  border-block: var(--border-width) solid var(--border-1);
+}
+.stat__value {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.stat__label { font-size: var(--text-sm); color: var(--text-2); }
+
+/* ============================================================ test stage
+   The measurement surface. Everything tinted is suppressed; the stimulus is
+   the only thing on screen that carries colour.
+   ========================================================================== */
+
+.stage {
+  min-height: calc(100dvh - var(--header-height));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  padding: var(--space-6) var(--space-5) var(--space-10);
+  background: var(--test-bg);
+  color: var(--test-fg);
+  text-align: center;
+}
+
+/* Nothing may animate inside a measurement. A transition between plates would
+   cross-fade two stimuli into a third the observer never should have seen. */
+.stage *,
+.stage *::before,
+.stage *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+.stage__prompt {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  color: var(--test-fg);
+  max-width: 40ch;
+}
+.stage__hint { font-size: var(--text-sm); color: var(--test-fg-2); max-width: 46ch; }
+
+.stage__progress { width: min(100%, 28rem); }
+
+.plate {
+  border-radius: 50%;
+  box-shadow: 0 2px 18px rgb(0 0 0 / 0.18);
+  /* Canvas smoothing must not soften the dot edges — the figure lives in
+     those edges. */
+  image-rendering: auto;
+}
+
+.stage__answers { width: min(100%, 30rem); }
+
+.stage__exit {
+  position: fixed;
+  top: calc(var(--header-height) + var(--space-3));
+  right: var(--space-4);
+  z-index: var(--z-sticky);
+}
+
+/* Optotype rendering surface for acuity — pure white, no chrome nearby. */
+.optotype-field {
+  display: grid;
+  place-items: center;
+  background: #fff;
+  padding: var(--space-8);
+  border-radius: var(--radius-md);
+}
+
+/* ------------------------------------------------------------- calibrate */
+
+.calibrator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  background: var(--surface-1);
+  border-radius: var(--radius-lg);
+}
+
+/* A dashed outline so the user can still see their physical card behind the
+   edge while they match it. */
+.calibrator__card {
+  border: 2px dashed var(--brand-600);
+  background: color-mix(in srgb, var(--brand-500) 8%, transparent);
+  position: relative;
+}
+.calibrator__card::after {
+  content: attr(data-size);
+  position: absolute;
+  inset-inline: 0;
+  bottom: var(--space-2);
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-2);
+}
+
+.calibrator__readout {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------- results */
+
+.result-headline {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  text-wrap: balance;
+}
+
+.result-metric {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-5);
+  background: var(--surface-1);
+  border-radius: var(--radius-md);
+}
+.result-metric__value {
+  font-family: var(--font-mono);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.result-metric__label { font-size: var(--text-sm); color: var(--text-2); }
+.result-metric__note  { font-size: var(--text-xs); color: var(--text-3); }
+
+/* The two-column "what this means / what it does not" block. Equal weight is
+   deliberate: the limits must not read as fine print. */
+.means-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 44rem) { .means-grid { grid-template-columns: 1fr 1fr; } }
+
+.means {
+  padding: var(--space-5);
+  border-radius: var(--radius-md);
+  border: var(--border-width) solid var(--border-1);
+}
+.means h4 { margin-bottom: var(--space-2); }
+.means ul { display: flex; flex-direction: column; gap: var(--space-2); font-size: var(--text-sm); color: var(--text-2); }
+.means li { padding-left: var(--space-5); position: relative; }
+.means li::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0.55em;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--border-3);
+}
+
+/* ------------------------------------------------------------- simulator */
+
+.sim-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 48rem) { .sim-grid { grid-template-columns: 1fr 1fr; } }
+
+.sim-pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sim-pane canvas {
+  width: 100%;
+  border-radius: var(--radius-md);
+  border: var(--border-width) solid var(--border-1);
+  background: var(--surface-1);
+}
+
+/* ---------------------------------------------------------------- report */
+
+.report-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: var(--space-6);
+  border-bottom: 2px solid var(--border-2);
+}
+.report-meta { font-size: var(--text-sm); color: var(--text-2); }
+.report-meta dt { font-weight: var(--weight-semibold); color: var(--text-1); display: inline; }
+.report-meta dd { display: inline; margin: 0; }
+.report-meta div + div { margin-top: var(--space-1); }
+
+@media print {
+  .stage { min-height: auto; }
+  .report-head { border-bottom-color: #000; }
+}
+
+/* ---------------------------------------------------------------- empty */
+
+.empty {
+  text-align: center;
+  padding: var(--space-16) var(--space-5);
+  color: var(--text-2);
+}
+.empty__icon { color: var(--text-3); margin: 0 auto var(--space-4); }
+
+/* ============================================================== marquee
+   The auto-sliding check showcase under the hero. See marquee.js for the
+   accessibility reasoning; the CSS side of it is that the animation is a
+   plain transform (compositor-only, no main-thread cost) and that
+   prefers-reduced-motion stops it outright rather than merely slowing it.
+   ========================================================================== */
+
+.marquee {
+  position: relative;
+  padding-block: var(--space-6);
+  border-block: var(--border-width) solid var(--border-1);
+  background: var(--surface-1);
+}
+
+.marquee__viewport {
+  overflow: hidden;
+  /* Fade the ends so chips enter and leave rather than being cut off. */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+
+.marquee__track {
+  display: flex;
+  width: max-content;
+  animation-name: marquee-slide;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.marquee__half {
+  display: flex;
+  gap: var(--space-3);
+  padding-inline: calc(var(--space-3) / 2);
+  flex: none;
+}
+
+@keyframes marquee-slide {
+  from { transform: translateX(0); }
+  /* Exactly one half-width, so the second copy lands where the first began. */
+  to   { transform: translateX(-50%); }
+}
+
+.marquee__chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  min-width: 16rem;
+  background: var(--surface-0);
+  border: var(--border-width) solid var(--border-1);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color var(--dur-fast) var(--ease-out),
+              box-shadow var(--dur-fast) var(--ease-out);
+}
+.marquee__chip:hover { border-color: var(--border-3); box-shadow: var(--shadow-sm); }
+
+/* Holds the live stimulus miniature. Fixed box so a round plate, a square
+   grid and a split field all sit on the same baseline. */
+.marquee__chip-media {
+  display: grid;
+  place-items: center;
+  width: 46px; height: 46px;
+  flex: none;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface-2);
+  border: var(--border-width) solid var(--border-1);
+}
+.marquee__chip-media .preview { display: block; }
+
+.marquee__chip-body { display: flex; flex-direction: column; min-width: 0; }
+.marquee__chip-name {
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+.marquee__chip-note {
+  font-size: var(--text-xs);
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.marquee__controls {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-4);
+}
+
+.marquee__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: 0 var(--space-4);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--text-2);
+  background: var(--surface-0);
+  border: var(--border-width) solid var(--border-2);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+}
+.marquee__toggle:hover { color: var(--text-1); border-color: var(--border-3); }
+
+/* Reduced motion: no animation at all, and the row becomes a normal
+   horizontally scrollable list the user drives themselves. Both the app's own
+   setting and the OS-level preference are honoured. */
+:root[data-reduce-motion] .marquee__track {
+  animation: none;
+  transform: none;
+}
+:root[data-reduce-motion] .marquee__viewport {
+  overflow-x: auto;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+:root[data-reduce-motion] .marquee__half[aria-hidden="true"] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee__track { animation: none; transform: none; }
+  .marquee__viewport {
+    overflow-x: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .marquee__half[aria-hidden="true"] { display: none; }
+}
+
+/* ========================================================== scroll reveal
+   The hidden state is applied by JS (see reveal.js) and never lives here on
+   its own, so a scripting failure leaves the page readable rather than blank.
+   ========================================================================== */
+
+[data-reveal-hidden] {
+  opacity: 0;
+  transform: translateY(14px);
+}
+
+[data-reveal-group] > *,
+.reveal {
+  transition:
+    opacity var(--dur-slow) var(--ease-out),
+    transform var(--dur-slow) var(--ease-out);
+}
+
+:root[data-reduce-motion] [data-reveal-hidden] {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal-hidden] { opacity: 1; transform: none; }
+  [data-reveal-group] > *, .reveal { transition: none; }
+}
