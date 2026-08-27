@@ -4,6 +4,7 @@
 
 import { h, icon } from '../core/dom.js';
 import { store } from '../core/store.js';
+import { testPreview } from './preview.js';
 
 /**
  * Only screen size and viewing distance actually block a test — the display
@@ -29,7 +30,7 @@ export function testCard(test) {
 
   return h('a.test-card', { href: `#/t/${test.id}` },
     h('div.row', { style: { '--gap': 'var(--space-3)' } },
-      h('div.test-card__icon', icon(test.icon, { size: 22 })),
+      h('div.test-card__media', testPreview(test.id, { size: 52 })),
       h('div',
         h('div.test-card__title', test.name),
         h('div.subtle', { style: { fontSize: 'var(--text-xs)' } }, test.tagline))),
@@ -50,7 +51,7 @@ export function testCard(test) {
 export function toolCard(tool) {
   return h('a.test-card', { href: tool.route },
     h('div.row', { style: { '--gap': 'var(--space-3)' } },
-      h('div.test-card__icon', icon(tool.icon, { size: 22 })),
+      h('div.test-card__media', testPreview(tool.id, { size: 52 })),
       h('div',
         h('div.test-card__title', tool.name),
         h('div.subtle', { style: { fontSize: 'var(--text-xs)' } }, tool.tagline))));

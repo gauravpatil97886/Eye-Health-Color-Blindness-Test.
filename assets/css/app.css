@@ -469,7 +469,7 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  min-width: 15rem;
+  min-width: 16rem;
   background: var(--surface-0);
   border: var(--border-width) solid var(--border-1);
   border-radius: var(--radius-lg);
@@ -480,15 +480,19 @@
 }
 .marquee__chip:hover { border-color: var(--border-3); box-shadow: var(--shadow-sm); }
 
-.marquee__chip-icon {
+/* Holds the live stimulus miniature. Fixed box so a round plate, a square
+   grid and a split field all sit on the same baseline. */
+.marquee__chip-media {
   display: grid;
   place-items: center;
-  width: 34px; height: 34px;
+  width: 46px; height: 46px;
   flex: none;
   border-radius: var(--radius-sm);
+  overflow: hidden;
   background: var(--surface-2);
-  color: var(--text-brand);
+  border: var(--border-width) solid var(--border-1);
 }
+.marquee__chip-media .preview { display: block; }
 
 .marquee__chip-body { display: flex; flex-direction: column; min-width: 0; }
 .marquee__chip-name {
@@ -546,4 +550,31 @@
     mask-image: none;
   }
   .marquee__half[aria-hidden="true"] { display: none; }
+}
+
+/* ========================================================== scroll reveal
+   The hidden state is applied by JS (see reveal.js) and never lives here on
+   its own, so a scripting failure leaves the page readable rather than blank.
+   ========================================================================== */
+
+[data-reveal-hidden] {
+  opacity: 0;
+  transform: translateY(14px);
+}
+
+[data-reveal-group] > *,
+.reveal {
+  transition:
+    opacity var(--dur-slow) var(--ease-out),
+    transform var(--dur-slow) var(--ease-out);
+}
+
+:root[data-reduce-motion] [data-reveal-hidden] {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal-hidden] { opacity: 1; transform: none; }
+  [data-reveal-group] > *, .reveal { transition: none; }
 }

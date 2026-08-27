@@ -22,6 +22,7 @@
 
 import { h, icon } from '../core/dom.js';
 import { prefersReducedMotion } from '../core/prefs.js';
+import { testPreview } from './preview.js';
 
 /**
  * @param {Array} items  test/tool records from the registry
@@ -85,10 +86,14 @@ export function createMarquee(items, { seconds = 48 } = {}) {
     h('div.marquee__controls', toggle));
 }
 
+/**
+ * Each chip carries a live miniature of that test's real stimulus rather than
+ * an icon — the fastest way to show what the suite actually contains.
+ */
 function chip(item) {
   const href = item.route ?? `#/t/${item.id}`;
   return h('a.marquee__chip', { href },
-    h('span.marquee__chip-icon', icon(item.icon, { size: 18 })),
+    h('span.marquee__chip-media', testPreview(item.id)),
     h('span.marquee__chip-body',
       h('span.marquee__chip-name', item.name),
       h('span.marquee__chip-note', item.tagline)));

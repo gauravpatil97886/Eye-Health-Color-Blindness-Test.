@@ -5,6 +5,7 @@ import { screeningTests, perceptionTests, TOOLS } from '../tests/registry.js';
 import { testCard, toolCard } from '../ui/cards.js';
 import { store } from '../core/store.js';
 import { calibrationStatus } from '../core/calibration.js';
+import { initReveal } from '../ui/reveal.js';
 
 export function testsView() {
   const cal = calibrationStatus(store.get().calibration);
@@ -30,18 +31,22 @@ export function testsView() {
 
       h('div.stack.stack--lg',
         h('h2', 'Vision checks'),
-        h('div.grid.grid--auto', screeningTests().map(testCard))),
+        h('div.grid.grid--auto', { 'data-reveal-group': '' }, screeningTests().map(testCard))),
 
       h('div.stack.stack--lg',
         h('h2', 'Eye & brain games'),
         h('p.muted', { style: { maxWidth: 'var(--measure)' } },
           'Real perceptual measurements, but framed as what they are: interesting, ' +
           'shareable, and not a statement about your health.'),
-        h('div.grid.grid--auto', perceptionTests().map(testCard))),
+        h('div.grid.grid--auto', { 'data-reveal-group': '' }, perceptionTests().map(testCard))),
 
       h('div.stack.stack--lg',
         h('h2', 'Tools'),
-        h('div.grid.grid--2', TOOLS.map(toolCard)))));
+        h('div.grid.grid--2', { 'data-reveal-group': '' }, TOOLS.map(toolCard)))));
 
-  return createView(el);
+  const view = createView(el);
+  requestAnimationFrame(() => {
+    if (el.isConnected) view.onDestroy(initReveal(el));
+  });
+  return view;
 }

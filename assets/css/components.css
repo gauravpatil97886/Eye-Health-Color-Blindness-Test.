@@ -129,6 +129,19 @@
   flex: none;
 }
 
+/* A live miniature of the test's own stimulus, rather than an icon. */
+.test-card__media {
+  display: grid;
+  place-items: center;
+  width: 52px; height: 52px;
+  flex: none;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--surface-1);
+  border: var(--border-width) solid var(--border-1);
+}
+.test-card__media .preview { display: block; }
+
 .test-card__title {
   font-family: var(--font-display);
   font-size: var(--text-lg);

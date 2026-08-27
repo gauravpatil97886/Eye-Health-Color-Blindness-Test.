@@ -13,6 +13,7 @@ import { screeningTests, perceptionTests, TOOLS } from '../tests/registry.js';
 import { createMosaic } from '../ui/mosaic.js';
 import { testCard, toolCard } from '../ui/cards.js';
 import { createMarquee } from '../ui/marquee.js';
+import { initReveal } from '../ui/reveal.js';
 
 export function landingView() {
   const canvas = h('canvas.mosaic__canvas', { width: 480, height: 480 });
@@ -65,7 +66,7 @@ export function landingView() {
     createMarquee([...screeningTests(), ...perceptionTests(), ...TOOLS]),
 
     h('section.container',
-      h('div.stats',
+      h('div.stats', { 'data-reveal-group': '' },
         stat('1 in 12', 'men have a colour vision deficiency'),
         stat('1 in 200', 'women have one'),
         stat('~60%', 'of cases are never formally diagnosed'),
@@ -77,7 +78,7 @@ export function landingView() {
           h('h2', { id: 'vision-checks' }, 'Vision checks'),
           h('p.lede', 'Eight of them, modelled on what an optometrist runs. Each states up ' +
                       'front what it measures — and what it cannot.')),
-        h('div.grid.grid--auto', screeningTests().map(testCard)))),
+        h('div.grid.grid--auto', { 'data-reveal-group': '' }, screeningTests().map(testCard)))),
 
     h('section.section--tight.container',
       h('div.stack.stack--lg',
@@ -85,17 +86,17 @@ export function landingView() {
           h('h2', { id: 'brain-games' }, 'Eye & brain games'),
           h('p.lede', 'Four real perceptual measurements, framed as what they are: ' +
                       'fascinating, shareable, and not a statement about your health.')),
-        h('div.grid.grid--auto', perceptionTests().map(testCard)))),
+        h('div.grid.grid--auto', { 'data-reveal-group': '' }, perceptionTests().map(testCard)))),
 
     h('section.section--tight.container',
       h('div.stack.stack--lg',
         h('h2', 'Tools'),
-        h('div.grid.grid--2', TOOLS.map(toolCard)))),
+        h('div.grid.grid--2', { 'data-reveal-group': '' }, TOOLS.map(toolCard)))),
 
     h('section.section.container',
       h('div.card.card--sunken.stack',
         h('h2', { style: { fontSize: 'var(--text-xl)' } }, 'What Fovea is honest about'),
-        h('div.means-grid',
+        h('div.means-grid', { 'data-reveal-group': '' },
           h('div.means',
             h('h4', 'What it can do'),
             h('ul',
@@ -116,6 +117,10 @@ export function landingView() {
           h('a', { href: '#/learn/when-to-see-a-doctor' }, 'When to see an eye doctor →')))));
 
   const view = createView(el);
+
+  requestAnimationFrame(() => {
+    if (el.isConnected) view.onDestroy(initReveal(el));
+  });
 
   // The mosaic is expensive to pack, so build it once the view is in the DOM.
   requestAnimationFrame(() => {
