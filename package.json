@@ -1,0 +1,14 @@
+{
+  "name": "fovea",
+  "version": "2.0.0",
+  "description": "Open-source vision screening, right in your browser.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "author": "Gaurav Patil",
+  "scripts": {
+    "dev": "python3 -m http.server 8080",
+    "test": "node --test test/"
+  },
+  "//": "No build step and no runtime dependencies. package.json exists only so Node can run the unit tests as ES modules; the site itself is plain files served as-is."
+}
