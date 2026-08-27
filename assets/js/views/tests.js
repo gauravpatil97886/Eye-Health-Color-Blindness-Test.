@@ -17,13 +17,13 @@ export function testsView() {
           'Each one states what it measures and what it cannot. Nothing here is a ' +
           'diagnosis, and a clear result is not a clean bill of health.')),
 
-      !cal.ok && h('div.callout.callout--info',
+      !store.isCalibrated && h('div.callout.callout--info',
         h('div.callout__icon', icon('ruler')),
         h('div.callout__body',
           h('p.callout__title', 'Some checks need your screen set up first'),
-          h('p', 'Acuity, contrast and near vision measure real angular sizes, so they need ' +
-                 'to know how big your pixels are and how far away you are sitting. It takes ' +
-                 'about a minute.'),
+          h('p', 'Acuity, contrast, near vision and the blind spot check measure real angular ' +
+                 'sizes, so they need to know how big your pixels are and how far away you are ' +
+                 'sitting. Everything else works without it. Takes about a minute.'),
           h('p', { style: { marginTop: 'var(--space-3)' } },
             h('a.btn.btn--secondary.btn--sm', { href: '#/calibrate' },
               icon('ruler', { size: 16 }), 'Set up my screen')))),
