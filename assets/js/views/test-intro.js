@@ -121,6 +121,54 @@ function instructionsFor(test) {
       'Do not anticipate — starting early voids that trial.',
       'Several rounds are averaged, so one slow go will not skew it.',
     ],
+    astigmatism: [
+      'Cover one eye and look at the centre of the dial.',
+      'Every line is drawn identically — any difference you see comes from your own eye.',
+      'Tap any lines that look darker, blacker or sharper than the rest.',
+      'All looking the same is the common answer, not a failure.',
+    ],
+    contrast: [
+      'Digits appear against grey, getting fainter each time.',
+      'Type the digit you see. Guess when you cannot tell — the method depends on it.',
+      'Turn your screen brightness up first, and avoid glare on the screen.',
+      'One eye at a time.',
+    ],
+    near: [
+      'Hold your face about 40 cm from the screen — roughly a forearm.',
+      'Keep your reading glasses on if you use them.',
+      'Say whether you can read each passage comfortably, without straining.',
+      'The text gets smaller until you say stop.',
+    ],
+    duochrome: [
+      'Cover one eye and look at the red and green panels.',
+      'The two halves are matched for brightness, so judge sharpness only.',
+      'Say which side looks crisper — or that they look the same.',
+      '“The same” is the answer a well-corrected eye usually gives.',
+    ],
+    'hue-arrangement': [
+      'Fifteen caps differ only in hue — same lightness, same intensity.',
+      'Put them into a smooth colour sequence starting from the fixed cap.',
+      'Tap one cap, then tap another, and they swap. No dragging needed.',
+      'Take your time; this one is not timed.',
+    ],
+    blindspot: [
+      'Cover one eye and stare at the cross — do not glance at the dot.',
+      'Drag the slider slowly to move the dot away from the cross.',
+      'At some point the dot vanishes while the line through it stays unbroken.',
+      'That gap is where your optic nerve leaves your retina. Everyone has one.',
+    ],
+    stroop: [
+      'A colour word appears printed in a different colour of ink.',
+      'Name the INK, not the word. GREEN printed in red is “red”.',
+      'Go as fast as you can while staying accurate.',
+      'The measurement is how much the clashing words slow you down.',
+    ],
+    peripheral: [
+      'A number in the centre changes every second or so — type each one.',
+      'Dots flash briefly around the edges. Press Space the moment you notice one.',
+      'Do not go hunting for the dots; keep your eyes on the number.',
+      'Typing the numbers is how we know you kept looking at the centre.',
+    ],
   };
   return common[test.id] ?? [
     'Read the on-screen instructions before each step.',

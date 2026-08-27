@@ -12,7 +12,7 @@
 import { h, icon, createView } from '../core/dom.js';
 import { byId } from '../tests/registry.js';
 import { store } from '../core/store.js';
-import { interpret } from '../tests/color-plates.js';
+import { interpret as interpretColour } from '../tests/color-plates.js';
 import { lastResult } from './test-run.js';
 
 export function testResultView({ params }) {
@@ -27,7 +27,7 @@ export function testResultView({ params }) {
         h('p', h('a.btn.btn--primary', { href: `#/t/${params.id}` }, 'Start the check')))));
   }
 
-  const reading = interpret(result);
+  const reading = interpretResult(result);
   const toneClass = { ok: 'badge--ok', watch: 'badge--watch', info: 'badge--info' }[reading.tone];
 
   const el = h('div.view.container.container--md.section',
@@ -74,8 +74,59 @@ export function testResultView({ params }) {
   return createView(el);
 }
 
+/**
+ * Every test gets the same four-part reading: a headline phrased as "your
+ * responses are consistent with", what it means, what it does NOT mean, and a
+ * next step. The colour test has bespoke copy; the rest are assembled from the
+ * registry entry, which already states each test's own limits — so a new test
+ * cannot ship without declaring what it cannot do.
+ */
+function interpretResult(result) {
+  if (result.testId === 'color-plates') return interpretColour(result);
+
+  const test = byId(result.testId);
+  const flagged = Boolean(
+    result.distortionReported ||
+    result.interocularFlag ||
+    result.referralUrgency === 'prompt'
+  );
+
+  return {
+    headline: headlineFor(result, test),
+    tone: flagged ? 'watch' : result.limitedByScreen || result.fixationHeld === false ? 'info' : 'ok',
+    means: meansFor(result, test),
+    notMeans: [
+      test?.cannot ?? 'This check cannot diagnose anything.',
+      'It ran on a screen whose brightness and colour handling could not be measured, in ' +
+      'lighting that could not be measured either.',
+      'A clear result is not reassurance — the conditions that matter most often cause no ' +
+      'symptoms at all.',
+    ],
+  };
+}
+
+function headlineFor(result, test) {
+  if (result.distortionReported) return 'You reported distortion in your central vision.';
+  if (result.interocularFlag) return 'There is a noticeable difference between your two eyes.';
+  if (result.limitedByScreen) return 'Your result reached the limit of what this screen can show.';
+  if (result.fixationHeld === false) return 'This run looks unreliable.';
+  return `${test?.name ?? 'Check'} complete.`;
+}
+
+function meansFor(result, test) {
+  const out = [];
+  if (result.summary) out.push(result.summary);
+  if (result.detail) out.push(result.detail);
+  if (result.limitedByScreen) {
+    out.push('Your eyes may well be better than this number — the display simply could not ' +
+             'draw anything finer from where you were sitting.');
+  }
+  if (!out.length) out.push(test?.measures ?? 'The check finished.');
+  return out;
+}
+
 function evidenceBlock(result) {
-  if (result.testId !== 'color-plates') return null;
+  if (result.testId !== 'color-plates') return genericEvidence(result);
 
   const c = result.counts;
   return h('div.stack.stack--sm',
@@ -95,6 +146,22 @@ function evidenceBlock(result) {
         : null));
 }
 
+/** Per-eye numbers, where a test produced them. */
+function genericEvidence(result) {
+  if (!Array.isArray(result.perEye) || result.perEye.length === 0) return null;
+  return h('div.stack.stack--sm',
+    h('h3', { style: { fontSize: 'var(--text-lg)' } }, 'By eye'),
+    h('div.grid', {
+      style: { '--gap': 'var(--space-3)', gridTemplateColumns: 'repeat(auto-fit, minmax(10rem, 1fr))' },
+    },
+      result.perEye.map((e) => metric(
+        e.snellen ?? (e.logCS != null ? e.logCS.toFixed(2) : null) ??
+          (e.smallestN != null ? `N${e.smallestN}` : null) ?? e.clearer ??
+          (e.foundAtDeg != null ? `${e.foundAtDeg.toFixed(1)}°` : '—'),
+        `${e.eye} eye`,
+        e.limitedByScreen ? 'Reached this screen’s limit' : null))));
+}
+
 const pct = (v) => `${Math.round(v * 100)}%`;
 
 function metric(value, label, note) {
@@ -105,6 +172,28 @@ function metric(value, label, note) {
 }
 
 function nextSteps(result) {
+  if (result.distortionReported) {
+    return 'Distortion on this grid is one of the few findings on this site that is worth an ' +
+           'appointment within days rather than at your convenience. It is not an emergency, ' +
+           'but do not leave it — bring this report with you.';
+  }
+  if (result.interocularFlag) {
+    return 'A difference of two lines or more between your eyes is worth mentioning to an ' +
+           'optometrist within the next few weeks. One eye compensating for the other is ' +
+           'exactly why this often goes unnoticed.';
+  }
+  if (result.limitedByScreen) {
+    return 'Move further from the screen and run it again to measure further, or calibrate ' +
+           'your screen size if you have not.';
+  }
+  if (result.fixationHeld === false) {
+    return 'Try it again and keep your eyes on the centre — the score only means something ' +
+           'if you did not look around.';
+  }
+  if (result.testId !== 'color-plates') {
+    return 'Nothing here needs following up on its own. Book a routine eye exam if it has ' +
+           'been more than two years.';
+  }
   if (result.verdict === 'typical') {
     return 'Nothing here needs following up. Book a routine eye exam anyway if it has been ' +
            'more than two years — the conditions that matter most are the ones you cannot feel.';

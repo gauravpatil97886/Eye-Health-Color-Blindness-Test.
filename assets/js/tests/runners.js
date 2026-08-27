@@ -10,7 +10,15 @@ const RUNNERS = {
   'color-plates': () => import('./runners/color-plates-runner.js'),
   'amsler': () => import('./runners/amsler-runner.js'),
   'astigmatism': () => import('./runners/astigmatism-runner.js'),
+  'acuity': () => import('./runners/acuity-runner.js'),
   'reaction': () => import('./runners/reaction-runner.js'),
+  'blindspot': () => import('./runners/blindspot-runner.js'),
+  'stroop': () => import('./runners/stroop-runner.js'),
+  'peripheral': () => import('./runners/peripheral-runner.js'),
+  'near': () => import('./runners/near-runner.js'),
+  'duochrome': () => import('./runners/duochrome-runner.js'),
+  'contrast': () => import('./runners/contrast-runner.js'),
+  'hue-arrangement': () => import('./runners/hue-arrangement-runner.js'),
 };
 
 export const hasRunner = (id) => Object.hasOwn(RUNNERS, id);
