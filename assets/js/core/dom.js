@@ -76,6 +76,10 @@ function applyProps(el, props) {
     } else if (key === 'html') {
       el.innerHTML = value; // only ever called with strings we author
     } else if (key in el && key !== 'list' && key !== 'form') {
+      // Direct property assignment, so `.value`, `.checked` and `.inert`
+      // behave. NOTE: pass real booleans for boolean properties — `inert: ''`
+      // assigns a falsy empty string and silently does nothing, where the
+      // attribute form `inert=""` would have been true.
       el[key] = value;
     } else {
       el.setAttribute(key, value === true ? '' : String(value));

@@ -12,6 +12,7 @@ import { store } from '../core/store.js';
 import { screeningTests, perceptionTests, TOOLS } from '../tests/registry.js';
 import { createMosaic } from '../ui/mosaic.js';
 import { testCard, toolCard } from '../ui/cards.js';
+import { createMarquee } from '../ui/marquee.js';
 
 export function landingView() {
   const canvas = h('canvas.mosaic__canvas', { width: 480, height: 480 });
@@ -58,6 +59,11 @@ export function landingView() {
                 'hue alone. Around 1 in 12 men see it closer to the right-hand end of this ' +
                 'slider than the left.')))))),
 
+    /* The whole catalogue, directly under the hero. It used to sit far below
+       the fold and most visitors never learned the site does more than one
+       test. */
+    createMarquee([...screeningTests(), ...perceptionTests(), ...TOOLS]),
+
     h('section.container',
       h('div.stats',
         stat('1 in 12', 'men have a colour vision deficiency'),
@@ -68,17 +74,17 @@ export function landingView() {
     h('section.section.container',
       h('div.stack.stack--lg',
         h('div.stack.stack--sm',
-          h('h2', 'Vision checks'),
-          h('p.lede', 'Modelled on the checks an optometrist runs. Each one tells you ' +
-                      'up front what it measures — and what it cannot.')),
+          h('h2', { id: 'vision-checks' }, 'Vision checks'),
+          h('p.lede', 'Eight of them, modelled on what an optometrist runs. Each states up ' +
+                      'front what it measures — and what it cannot.')),
         h('div.grid.grid--auto', screeningTests().map(testCard)))),
 
     h('section.section--tight.container',
       h('div.stack.stack--lg',
         h('div.stack.stack--sm',
-          h('h2', 'Eye &amp; brain games'),
-          h('p.lede', 'Real perceptual measurements, framed as what they are: ' +
-                      'fascinating, shareable, and not a diagnosis of anything.')),
+          h('h2', { id: 'brain-games' }, 'Eye & brain games'),
+          h('p.lede', 'Four real perceptual measurements, framed as what they are: ' +
+                      'fascinating, shareable, and not a statement about your health.')),
         h('div.grid.grid--auto', perceptionTests().map(testCard)))),
 
     h('section.section--tight.container',

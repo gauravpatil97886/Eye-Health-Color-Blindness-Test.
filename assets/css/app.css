@@ -421,3 +421,129 @@
   color: var(--text-2);
 }
 .empty__icon { color: var(--text-3); margin: 0 auto var(--space-4); }
+
+/* ============================================================== marquee
+   The auto-sliding check showcase under the hero. See marquee.js for the
+   accessibility reasoning; the CSS side of it is that the animation is a
+   plain transform (compositor-only, no main-thread cost) and that
+   prefers-reduced-motion stops it outright rather than merely slowing it.
+   ========================================================================== */
+
+.marquee {
+  position: relative;
+  padding-block: var(--space-6);
+  border-block: var(--border-width) solid var(--border-1);
+  background: var(--surface-1);
+}
+
+.marquee__viewport {
+  overflow: hidden;
+  /* Fade the ends so chips enter and leave rather than being cut off. */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+
+.marquee__track {
+  display: flex;
+  width: max-content;
+  animation-name: marquee-slide;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.marquee__half {
+  display: flex;
+  gap: var(--space-3);
+  padding-inline: calc(var(--space-3) / 2);
+  flex: none;
+}
+
+@keyframes marquee-slide {
+  from { transform: translateX(0); }
+  /* Exactly one half-width, so the second copy lands where the first began. */
+  to   { transform: translateX(-50%); }
+}
+
+.marquee__chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  min-width: 15rem;
+  background: var(--surface-0);
+  border: var(--border-width) solid var(--border-1);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color var(--dur-fast) var(--ease-out),
+              box-shadow var(--dur-fast) var(--ease-out);
+}
+.marquee__chip:hover { border-color: var(--border-3); box-shadow: var(--shadow-sm); }
+
+.marquee__chip-icon {
+  display: grid;
+  place-items: center;
+  width: 34px; height: 34px;
+  flex: none;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-brand);
+}
+
+.marquee__chip-body { display: flex; flex-direction: column; min-width: 0; }
+.marquee__chip-name {
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+.marquee__chip-note {
+  font-size: var(--text-xs);
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.marquee__controls {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-4);
+}
+
+.marquee__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: 0 var(--space-4);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--text-2);
+  background: var(--surface-0);
+  border: var(--border-width) solid var(--border-2);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+}
+.marquee__toggle:hover { color: var(--text-1); border-color: var(--border-3); }
+
+/* Reduced motion: no animation at all, and the row becomes a normal
+   horizontally scrollable list the user drives themselves. Both the app's own
+   setting and the OS-level preference are honoured. */
+:root[data-reduce-motion] .marquee__track {
+  animation: none;
+  transform: none;
+}
+:root[data-reduce-motion] .marquee__viewport {
+  overflow-x: auto;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+:root[data-reduce-motion] .marquee__half[aria-hidden="true"] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee__track { animation: none; transform: none; }
+  .marquee__viewport {
+    overflow-x: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .marquee__half[aria-hidden="true"] { display: none; }
+}
